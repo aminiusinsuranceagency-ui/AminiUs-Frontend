@@ -1,0 +1,473 @@
+<div class="reminders-container">
+  <app-navbar></app-navbar> 
+  
+  <!-- Loading Overlay -->
+  <div *ngIf="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading reminders...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    <i class="fa fa-exclamation-triangle"></i>
+    {{ error }}
+    <button class="btn btn-sm btn-primary" (click)="loadInitialData()">
+      <i class="fa fa-refresh"></i> Retry
+    </button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <i class="fa fa-bell"></i> 
+          Reminders & Notifications
+        </h1>
+        <p class="page-subtitle">Manage your reminders and automated messages</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="refreshReminders()" [disabled]="loading">
+          <i class="fa fa-refresh"></i> 
+          Refresh
+        </button>
+        <button class="btn btn-secondary" (click)="openMessageModal()">
+          <i class="fa fa-paper-plane"></i> 
+          New Message
+        </button>
+        <button class="btn btn-primary" (click)="openReminderModal()">
+          <i class="fa fa-check-circle"></i> 
+          New Reminder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <button 
+        class="tab"
+        [class.active]="activeTab === 'upcoming'"
+        (click)="setActiveTab('upcoming')">
+        <i class="fa fa-clock"></i>
+        Upcoming
+        <span class="badge">{{ getUpcomingReminders().length }}</span>
+      </button>
+      <button 
+        class="tab"
+        [class.active]="activeTab === 'completed'"
+        (click)="setActiveTab('completed')">
+        <i class="fa fa-check-circle"></i>
+        Completed
+        <span class="badge">{{ getCompletedReminders().length }}</span>
+      </button>
+      <button 
+        class="tab"
+        [class.active]="activeTab === 'messages'"
+        (click)="setActiveTab('messages')">
+        <i class="fa fa-paper-plane"></i>
+        Messages
+        <span class="badge">{{ automatedMessages.length }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="content">
+    <!-- Upcoming Reminders Tab -->
+    <div *ngIf="activeTab === 'upcoming'" class="tab-content">
+      <div class="reminders-grid">
+        <div 
+          *ngFor="let reminder of getUpcomingReminders()" 
+          class="reminder-card"
+          [class]="getPriorityClass(reminder.Priority)">
+          <div class="reminder-header">
+            <div class="reminder-type">
+              <i [class]="'icon-' + getTypeIcon(reminder.ReminderType)"></i>
+              <span class="type-label">{{ reminder.ReminderType }}</span>
+            </div>
+            <div class="reminder-priority">
+              <i [class]="'icon-' + getPriorityIcon(reminder.Priority)"></i>
+            </div>
+          </div>
+          
+          <div class="reminder-content">
+            <h3 class="reminder-title">{{ reminder.Title }}</h3>
+            <p class="reminder-description" *ngIf="reminder.Description">
+              {{ reminder.Description }}
+            </p>
+            <div class="reminder-client" *ngIf="reminder.ClientName || reminder.FullClientName">
+              <i class="fa fa-user"></i> 
+              <span>{{ reminder.ClientName || reminder.FullClientName }}</span>
+            </div>
+          </div>
+
+          <div class="reminder-details">
+            <div class="detail-item">
+              <i class="fas fa-calendar-alt"></i> 
+              <span>{{ reminder.ReminderDate | date:'MMM dd, yyyy' }}</span>
+            </div>
+            <div class="detail-item" *ngIf="reminder.ReminderTime">
+              <i class="fa fa-clock"></i>
+              <span>{{ reminder.ReminderTime }}</span>
+            </div>
+          </div>
+
+          <div class="reminder-settings">
+            <div class="settings-indicators">
+              <span class="indicator" *ngIf="reminder.EnableSMS" title="SMS Enabled">
+                <i class="fas fa-comment-alt"></i> 
+              </span>
+              <span class="indicator" *ngIf="reminder.EnableWhatsApp" title="WhatsApp Enabled">
+                <i class="fab fa-whatsapp"></i>
+              </span>
+              <span class="indicator" *ngIf="reminder.EnablePushNotification" title="Push Notifications">
+                <i class="fas fa-bell"></i> 
+              </span>
+              <span class="indicator" *ngIf="reminder.AutoSend" title="Auto Send">
+                <i class="fas fa-bolt"></i> 
+              </span>
+            </div>
+            <div class="advance-notice">
+              <i class="fa fa-clock"></i> 
+              <span>{{ reminder.AdvanceNotice }} before</span>
+            </div>
+          </div>
+
+          <div class="reminder-actions">
+            <button class="btn-icon" (click)="openReminderModal(reminder)" title="Edit" [disabled]="loading">
+              <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn-icon success" (click)="completeReminder(reminder.ReminderId)" 
+                    title="Mark Complete" [disabled]="loading">
+              <i class="fa fa-check-circle"></i> 
+            </button>
+            <button class="btn-icon danger" (click)="deleteReminder(reminder.ReminderId)" 
+                    title="Delete" [disabled]="loading">
+              <i class="fa fa-trash"></i> 
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="getUpcomingReminders().length === 0 && !loading" class="empty-state">
+        <i class="fas fa-calendar-alt"></i>
+        <h3>No Upcoming Reminders</h3>
+        <p>You're all caught up! Create a new reminder to stay organized.</p>
+        <button class="btn btn-primary" (click)="openReminderModal()">
+         <i class="fa fa-edit"></i> 
+          Create Reminder
+        </button>
+      </div>
+    </div>
+
+    <!-- Completed Reminders Tab -->
+    <div *ngIf="activeTab === 'completed'" class="tab-content">
+      <div class="reminders-list">
+        <div *ngFor="let reminder of getCompletedReminders()" class="reminder-item completed">
+          <div class="reminder-icon">
+            <i [class]="'icon-' + getTypeIcon(reminder.ReminderType)"></i>
+          </div>
+          <div class="reminder-info">
+            <h4>{{ reminder.Title }}</h4>
+            <p *ngIf="reminder.ClientName || reminder.FullClientName">
+              {{ reminder.ClientName || reminder.FullClientName }}
+            </p>
+            <span class="completion-date">
+              Completed on {{ reminder.CompletedDate ? (reminder.CompletedDate | date:'MMM dd, yyyy') : (reminder.ReminderDate | date:'MMM dd, yyyy') }}
+            </span>
+          </div>
+          <div class="reminder-actions">
+            <button class="btn-icon danger" (click)="deleteReminder(reminder.ReminderId)" [disabled]="loading">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="getCompletedReminders().length === 0 && !loading" class="empty-state">
+        <i class="fa fa-check-circle"></i> 
+        <h3>No Completed Reminders</h3>
+        <p>Completed reminders will appear here for your reference.</p>
+      </div>
+    </div>
+
+    <!-- Messages Tab -->
+    <div *ngIf="activeTab === 'messages'" class="tab-content">
+      <div class="messages-grid">
+        <div *ngFor="let message of automatedMessages" class="message-card">
+          <div class="message-header">
+            <div class="message-type">
+              <i [class]="'icon-' + getTypeIcon(message.type)"></i>
+              <span>{{ message.type }}</span>
+            </div>
+            <div class="message-status">
+              <span class="status-badge" [class]="'status-' + message.status.toLowerCase()">
+                {{ message.status }}
+              </span>
+            </div>
+          </div>
+
+          <div class="message-content">
+            <h3>{{ message.title }}</h3>
+            <div class="message-template">
+              <p>{{ message.template }}</p>
+            </div>
+          </div>
+
+          <div class="message-details">
+            <div class="detail-row">
+              <i class="fas fa-calendar-alt"></i>
+              <span>{{ message.scheduledDate | date:'MMM dd, yyyy HH:mm' }}</span>
+            </div>
+            <div class="detail-row">
+              <i class="fa fa-paper-plane"></i>
+              <span>{{ message.deliveryMethod }}</span>
+            </div>
+            <div class="detail-row">
+              <i class="fa fa-user"></i>
+              <span>{{ message.recipients.length }} recipient(s)</span>
+            </div>
+          </div>
+
+          <div class="message-actions">
+            <button class="btn-icon" title="Edit">
+              <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn-icon danger" (click)="deleteMessage(message.messageId)" title="Delete">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="automatedMessages.length === 0" class="empty-state">
+        <i class="icon-message-square"></i>
+        <h3>No Automated Messages</h3>
+        <p>Set up automated messages for birthdays, holidays, and more.</p>
+        <button class="btn btn-primary" (click)="openMessageModal()">
+          <i class="fa fa-edit"></i> 
+          Create Message
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reminder Modal -->
+<div class="modal-overlay" *ngIf="showReminderModal" (click)="closeReminderModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ selectedReminder ? 'Edit Reminder' : 'New Reminder' }}</h2>
+      <button class="btn-close" (click)="closeReminderModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="reminderForm" (ngSubmit)="saveReminder()">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ReminderType">Reminder Type *</label>
+            <select id="ReminderType" formControlName="ReminderType" class="form-control">
+              <option value="">Select type</option>
+              <option *ngFor="let type of reminderTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="Priority">Priority *</label>
+            <select id="Priority" formControlName="Priority" class="form-control">
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="Title">Title *</label>
+          <input type="text" id="Title" formControlName="Title" 
+                 class="form-control" placeholder="Enter reminder title">
+        </div>
+
+        <div class="form-group">
+          <label for="Description">Description</label>
+          <textarea id="Description" formControlName="Description" 
+                    class="form-control" rows="3" 
+                    placeholder="Enter description (optional)"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ClientId">Client (Optional)</label>
+            <select id="ClientId" formControlName="ClientId" class="form-control" (change)="onClientSelected($event)">
+              <option value="">Select client (optional)</option>
+              <option *ngFor="let client of clients" [value]="client.ClientId">
+                {{ client.FirstName }} {{ client.Surname || client.LastName }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ClientName">Client Name</label>
+            <input type="text" id="ClientName" formControlName="ClientName" 
+                   class="form-control" placeholder="Or enter client name manually">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ReminderDate">Date *</label>
+            <input type="date" id="ReminderDate" formControlName="ReminderDate" 
+                   class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="ReminderTime">Time</label>
+            <input type="time" id="ReminderTime" formControlName="ReminderTime" 
+                   class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="AdvanceNotice">Advance Notice</label>
+          <select id="AdvanceNotice" formControlName="AdvanceNotice" class="form-control">
+            <option *ngFor="let option of advanceNoticeOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="notification-settings">
+          <h4>Notification Settings</h4>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="EnablePushNotification">
+              <span class="checkmark"></span>
+              Push Notifications
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="EnableSMS">
+              <span class="checkmark"></span>
+              SMS Notifications
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="EnableWhatsApp">
+              <span class="checkmark"></span>
+              WhatsApp Notifications
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="AutoSend">
+              <span class="checkmark"></span>
+              Auto Send Messages
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="CustomMessage">Custom Message</label>
+          <textarea id="CustomMessage" formControlName="CustomMessage" 
+                    class="form-control" rows="3" 
+                    placeholder="Enter custom message template (optional)"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="Notes">Notes</label>
+          <textarea id="Notes" formControlName="Notes" 
+                    class="form-control" rows="2" 
+                    placeholder="Additional notes (optional)"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeReminderModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="!reminderForm.valid || loading">
+          <i class="fa fa-spinner fa-spin" *ngIf="loading"></i>
+          {{ selectedReminder ? 'Update' : 'Create' }} Reminder
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Message Modal -->
+<div class="modal-overlay" *ngIf="showMessageModal" (click)="closeMessageModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>New Automated Message</h2>
+      <button class="btn-close" (click)="closeMessageModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="messageForm" (ngSubmit)="saveMessage()">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="messageType">Message Type *</label>
+            <select id="messageType" formControlName="type" class="form-control">
+              <option value="">Select type</option>
+              <option value="Birthday">Birthday</option>
+              <option value="Holiday">Holiday</option>
+              <option value="Policy Expiry">Policy Expiry</option>
+              <option value="Appointment">Appointment</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="deliveryMethod">Delivery Method *</label>
+            <select id="deliveryMethod" formControlName="deliveryMethod" class="form-control">
+              <option value="SMS">SMS Only</option>
+              <option value="WhatsApp">WhatsApp Only</option>
+              <option value="Both">Both SMS & WhatsApp</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="messageTitle">Title *</label>
+          <input type="text" id="messageTitle" formControlName="title" 
+                 class="form-control" placeholder="Enter message title">
+        </div>
+
+        <div class="form-group">
+          <label for="template">Message Template *</label>
+          <textarea id="template" formControlName="template" 
+                    class="form-control" rows="4" 
+                    placeholder="Enter your message template. Use {name} for client name, {date} for dates, etc."></textarea>
+          <small class="form-hint">
+              placeholder="Enter your message template. Use {{ '{' }}name{{ '}' }} for client name, {{ '{' }}date{{ '}' }} for dates, etc.">
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="scheduledDate">Scheduled Date *</label>
+          <input type="datetime-local" id="scheduledDate" formControlName="scheduledDate" 
+                 class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="recipients">Recipients</label>
+          <textarea id="recipients" formControlName="recipients" 
+                    class="form-control" rows="3" 
+                    placeholder="Enter phone numbers separated by commas (e.g., 254712345678, 254798765432)"></textarea>
+          <small class="form-hint">
+            Leave empty to send to all clients automatically
+          </small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeMessageModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="!messageForm.valid">
+          Schedule Message
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

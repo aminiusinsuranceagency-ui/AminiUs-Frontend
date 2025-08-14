@@ -1,0 +1,433 @@
+<div class="clients-container">
+  <app-navbar></app-navbar>
+  
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Loading...</p>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="alert alert-error" *ngIf="error" (click)="clearError()">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>{{ error }}</span>
+    <button class="btn-close-alert">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <i class="fas fa-users"></i>
+          Clients & Prospects
+        </h1>
+        <p class="page-subtitle">Manage your client relationships effectively</p>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" (click)="refreshData()" [disabled]="loading" title="Refresh Data">
+          <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+          Refresh
+        </button>
+        <button class="btn btn-primary" (click)="openAddModal()">
+          <i class="fas fa-plus"></i>
+          Add New Client
+        </button>
+      </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon clients">
+          <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getClientCount() }}</h3>
+          <p>Active Clients</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon prospects">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getProspectCount() }}</h3>
+          <p>Prospects</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getTotalCount() }}</h3>
+          <p>Total Contacts</p>
+        </div>
+      </div>
+<div class="stat-card" *ngIf="(statistics?.TodayBirthdays || 0) > 0">
+  <div class="stat-icon birthdays">
+    <i class="fas fa-birthday-cake"></i>
+  </div>
+  <div class="stat-content">
+    <h3>{{ statistics?.TodayBirthdays }}</h3>
+    <p>Birthdays Today</p>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-filter-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          placeholder="Search clients by name, phone, or email..." 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()"
+          class="search-input"
+          [disabled]="loading">
+      </div>
+    </div>
+    
+    <div class="filter-group">
+      <select [(ngModel)]="filterType" (change)="onFilterChange()" class="filter-select" [disabled]="loading">
+        <option value="all">All Contacts</option>
+        <option value="clients">Clients Only</option>
+        <option value="prospects">Prospects Only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Clients Grid -->
+  <div class="clients-grid" *ngIf="filteredClients.length > 0 && !loading">
+    <div class="client-card" *ngFor="let client of filteredClients; trackBy: trackByClientId">
+      <div class="client-header">
+        <div class="client-avatar">
+          <span>{{ client.firstName[0] }}{{ client.surname[0] }}</span>
+        </div>
+        <div class="client-info">
+          <h3 class="client-name">{{ client.firstName }} {{ client.surname }} {{ client.lastName }}</h3>
+          <div class="client-status">
+            <span class="status-badge" [ngClass]="{'client': client.isClient, 'prospect': !client.isClient}">
+              {{ client.isClient ? 'Client' : 'Prospect' }}
+            </span>
+            <span class="insurance-type">{{ client.insuranceType }}</span>
+          </div>
+        </div>
+        <div class="client-actions">
+          <button class="btn-icon" (click)="openViewModal(client)" title="View Details">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="btn-icon" (click)="openEditModal(client)" title="Edit">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-icon delete" (click)="deleteClient(client.id)" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="client-details">
+        <div class="detail-row">
+          <i class="fas fa-phone"></i>
+          <span>{{ client.phoneNumber }}</span>
+        </div>
+        <div class="detail-row">
+          <i class="fas fa-envelope"></i>
+          <span>{{ client.email }}</span>
+        </div>
+        <div class="detail-row">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>{{ client.address }}</span>
+        </div>
+        <div class="detail-row" *ngIf="client.policy">
+          <i class="fas fa-shield-alt"></i>
+          <span>{{ client.policy.name }} - {{ client.policy.status }}</span>
+        </div>
+      </div>
+      
+      <div class="client-footer" *ngIf="!client.isClient">
+        <button class="btn btn-sm btn-secondary" (click)="convertToClient(client)">
+          <i class="fas fa-user-check"></i>
+          Convert to Client
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State for Grid -->
+  <div class="loading-grid" *ngIf="loading && clients.length === 0">
+    <div class="skeleton-card" *ngFor="let item of [1,2,3,4,5,6]">
+      <div class="skeleton-header">
+        <div class="skeleton-avatar"></div>
+        <div class="skeleton-info">
+          <div class="skeleton-line skeleton-name"></div>
+          <div class="skeleton-line skeleton-status"></div>
+        </div>
+      </div>
+      <div class="skeleton-details">
+        <div class="skeleton-line" *ngFor="let line of [1,2,3]"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="filteredClients.length === 0 && !loading">
+    <div class="empty-icon">
+      <i class="fas fa-users"></i>
+    </div>
+    <h3>No clients found</h3>
+    <p>{{ searchTerm ? 'Try adjusting your search criteria' : 'Start by adding your first client or prospect' }}</p>
+    <button class="btn btn-primary" (click)="openAddModal()">
+      <i class="fas fa-plus"></i>
+      Add First Client
+    </button>
+  </div>
+</div>
+
+<!-- Add/Edit Client Modal -->
+<div class="modal-overlay" *ngIf="showAddModal || showEditModal" (click)="showAddModal ? closeAddModal() : closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ showAddModal ? 'Add New Client' : 'Edit Client' }}</h2>
+      <button class="btn-close" (click)="showAddModal ? closeAddModal() : closeEditModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="clientForm" (ngSubmit)="onSubmit()" class="client-form">
+      <!-- Form Error Display -->
+      <div class="form-error" *ngIf="error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="firstName">First Name *</label>
+          <input type="text" id="firstName" formControlName="firstName" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('firstName')?.invalid && clientForm.get('firstName')?.touched">
+            First name is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="surname">Surname *</label>
+          <input type="text" id="surname" formControlName="surname" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('surname')?.invalid && clientForm.get('surname')?.touched">
+            Surname is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="lastName">Last Name *</label>
+          <input type="text" id="lastName" formControlName="lastName" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('lastName')?.invalid && clientForm.get('lastName')?.touched">
+            Last name is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number *</label>
+          <input type="tel" id="phoneNumber" formControlName="phoneNumber" class="form-control" placeholder="07xxxxxxxx" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('phoneNumber')?.invalid && clientForm.get('phoneNumber')?.touched">
+            Valid phone number is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email Address *</label>
+          <input type="email" id="email" formControlName="email" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('email')?.invalid && clientForm.get('email')?.touched">
+            Valid email address is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="nationalId">National ID *</label>
+          <input type="text" id="nationalId" formControlName="nationalId" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('nationalId')?.invalid && clientForm.get('nationalId')?.touched">
+            National ID is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="dateOfBirth">Date of Birth *</label>
+          <input type="date" id="dateOfBirth" formControlName="dateOfBirth" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="clientForm.get('dateOfBirth')?.invalid && clientForm.get('dateOfBirth')?.touched">
+            Date of birth is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="insuranceType">Insurance Type *</label>
+          <select id="insuranceType" formControlName="insuranceType" class="form-control" [disabled]="loading">
+            <option value="">Select Insurance Type</option>
+            <option *ngFor="let type of insuranceTypes" [value]="type">{{ type }}</option>
+          </select>
+          <div class="error-message" *ngIf="clientForm.get('insuranceType')?.invalid && clientForm.get('insuranceType')?.touched">
+            Please select an insurance type
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group full-width">
+        <label for="address">Address *</label>
+        <textarea id="address" formControlName="address" class="form-control" rows="2" [disabled]="loading"></textarea>
+        <div class="error-message" *ngIf="clientForm.get('address')?.invalid && clientForm.get('address')?.touched">
+          Address is required
+        </div>
+      </div>
+      
+      <div class="form-group full-width">
+        <label for="notes">Notes</label>
+        <textarea id="notes" formControlName="notes" class="form-control" rows="3" placeholder="Additional notes about the client..." [disabled]="loading"></textarea>
+      </div>
+      
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="isClient" [disabled]="loading">
+          <span class="checkmark"></span>
+          Mark as Client (instead of Prospect)
+        </label>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="showAddModal ? closeAddModal() : closeEditModal()" [disabled]="loading">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="clientForm.invalid || loading">
+          <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+          <i class="fas fa-check" *ngIf="!loading"></i>
+          {{ showAddModal ? 'Add Client' : 'Update Client' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- View Client Modal -->
+<div class="modal-overlay" *ngIf="showViewModal" (click)="closeViewModal()">
+  <div class="modal-content view-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Client Details</h2>
+      <button class="btn-close" (click)="closeViewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="client-profile" *ngIf="selectedClient">
+      <div class="profile-header">
+        <div class="profile-avatar">
+          <span>{{ selectedClient.firstName[0] }}{{ selectedClient.surname[0] }}</span>
+        </div>
+        <div class="profile-info">
+          <h3>{{ selectedClient.firstName }} {{ selectedClient.surname }} {{ selectedClient.lastName }}</h3>
+          <span class="status-badge large" [ngClass]="{'client': selectedClient.isClient, 'prospect': !selectedClient.isClient}">
+            {{ selectedClient.isClient ? 'Client' : 'Prospect' }}
+          </span>
+        </div>
+      </div>
+      
+      <div class="profile-details">
+        <div class="detail-section">
+          <h4>Contact Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Phone:</label>
+              <span>{{ selectedClient.phoneNumber }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Email:</label>
+              <span>{{ selectedClient.email }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Address:</label>
+              <span>{{ selectedClient.address }}</span>
+            </div>
+            <div class="detail-item">
+              <label>National ID:</label>
+              <span>{{ selectedClient.nationalId }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="detail-section">
+          <h4>Personal Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Date of Birth:</label>
+              <span>{{ formatDate(selectedClient.dateOfBirth) }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Age:</label>
+              <span>{{ calculateAge(selectedClient.dateOfBirth) }} years</span>
+            </div>
+            <div class="detail-item">
+              <label>Insurance Type:</label>
+              <span>{{ selectedClient.insuranceType }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="detail-section" *ngIf="selectedClient.policy">
+          <h4>Policy Information</h4>
+          <div class="policy-card">
+            <div class="policy-header">
+              <h5>{{ selectedClient.policy.name }}</h5>
+              <span class="policy-status" [ngClass]="selectedClient.policy.status.toLowerCase()">
+                {{ selectedClient.policy.status }}
+              </span>
+            </div>
+            <div class="policy-details">
+              <div class="policy-item">
+                <label>Company:</label>
+                <span>{{ selectedClient.policy.companyName }}</span>
+              </div>
+              <div class="policy-item">
+                <label>Type:</label>
+                <span>{{ selectedClient.policy.type }}</span>
+              </div>
+              <div class="policy-item">
+                <label>Start Date:</label>
+                <span>{{ formatDate(selectedClient.policy.startDate) }}</span>
+              </div>
+              <div class="policy-item">
+                <label>End Date:</label>
+                <span>{{ formatDate(selectedClient.policy.endDate) }}</span>
+              </div>
+              <div class="policy-item" *ngIf="selectedClient.policy.notes">
+                <label>Notes:</label>
+                <span>{{ selectedClient.policy.notes }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="detail-section" *ngIf="selectedClient.notes">
+          <h4>Notes</h4>
+          <p class="notes-content">{{ selectedClient.notes }}</p>
+        </div>
+      </div>
+      
+      <div class="profile-actions">
+        <button class="btn btn-secondary" (click)="openEditModal(selectedClient!)">
+          <i class="fas fa-edit"></i>
+          Edit Client
+        </button>
+        <button class="btn btn-primary">
+          <i class="fas fa-calendar"></i>
+          Schedule Appointment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

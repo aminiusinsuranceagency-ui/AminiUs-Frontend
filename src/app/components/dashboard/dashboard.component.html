@@ -1,0 +1,210 @@
+<!-- Dashboard Container -->
+<div class="dashboard-container">
+  <!-- Import navbar -->
+  <app-navbar></app-navbar>
+
+  <!-- Main Dashboard Content -->
+  <div class="dashboard-content">
+    
+    <!-- Header Section -->
+    <div class="dashboard-header">
+      <div class="greeting-section">
+        <h1 class="greeting">{{ greeting }}</h1>
+        <p class="current-date">{{ currentTime | date:'EEEE, MMMM d, yyyy' }}</p>
+        <p class="current-time">{{ currentTime | date:'h:mm a' }}</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-refresh" (click)="refreshDashboard()" [disabled]="loading">
+          <i class="fas fa-sync-alt" [class.spinning]="loading"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Stats Grid -->
+    <div class="stats-grid" *ngIf="!statsLoading">
+      <div class="stat-card" *ngFor="let stat of quickStats" [style.border-left-color]="stat.color">
+        <div class="stat-icon" [style.color]="stat.color">
+          <i [class]="stat.icon"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-label">{{ stat.label }}</div>
+          <div class="stat-trend" *ngIf="stat.trend">{{ stat.trend }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Loading State -->
+    <div class="stats-loading" *ngIf="statsLoading">
+      <div class="skeleton-stat" *ngFor="let i of [1,2,3,4,5,6]"></div>
+    </div>
+
+    <!-- Today's Activities Section -->
+    <div class="activities-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fas fa-calendar-day"></i>
+          Today's Activities
+        </h2>
+        <span class="activity-count">{{ todayActivities.length }}</span>
+      </div>
+
+      <!-- Activities Loading State -->
+      <div class="activities-loading" *ngIf="activitiesLoading">
+        <div class="skeleton-activity" *ngFor="let i of [1,2,3]"></div>
+      </div>
+
+      <!-- Activities List -->
+      <div class="activities-list" *ngIf="!activitiesLoading">
+        <div class="activity-card" 
+             *ngFor="let activity of todayActivities" 
+             (click)="selectActivity(activity)"
+             [class.selected]="selectedActivity?.id === activity.id">
+          
+          <div class="activity-indicator" [style.background-color]="activity.color"></div>
+          
+          <div class="activity-icon" [style.color]="activity.color">
+            <i [class]="activity.icon"></i>
+          </div>
+          
+          <div class="activity-content">
+            <div class="activity-header">
+              <h3 class="activity-title">{{ activity.title }}</h3>
+              <span class="activity-time" *ngIf="activity.time">
+                {{ formatTime(activity.time) }}
+              </span>
+            </div>
+            <p class="activity-subtitle">{{ activity.subtitle }}</p>
+            <div class="activity-meta">
+              <span class="activity-status" [style.color]="activity.color">
+                {{ activity.status | titlecase }}
+              </span>
+              <span class="activity-countdown" *ngIf="activity.time">
+                {{ getTimeUntil(activity.time) }}
+              </span>
+              <span class="activity-priority" 
+                    *ngIf="activity.priority"
+                    [class]="'priority-' + activity.priority.toLowerCase()">
+                {{ activity.priority }} Priority
+              </span>
+            </div>
+          </div>
+          
+          <div class="activity-actions">
+            <button class="btn-action" title="View Details">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-activities" *ngIf="todayActivities.length === 0">
+          <i class="fas fa-calendar-check empty-icon"></i>
+          <h3>No activities scheduled for today</h3>
+          <p>Take a moment to plan your day or check upcoming activities.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Notes Section -->
+    <div class="notes-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fas fa-sticky-note"></i>
+          Today's Notes
+        </h2>
+        <button class="btn-edit-notes" (click)="toggleNotesEditor()" [disabled]="notesLoading">
+          <i class="fas fa-edit"></i>
+          {{ showNotesEditor ? 'Cancel' : 'Edit' }}
+        </button>
+      </div>
+
+      <!-- Notes Loading State -->
+      <div class="notes-loading" *ngIf="notesLoading">
+        <div class="skeleton-notes"></div>
+      </div>
+
+      <!-- Notes Display -->
+      <div class="notes-content" *ngIf="!notesLoading && !showNotesEditor">
+        <div class="notes-display" *ngIf="todaysNotes.length > 0 && todaysNotes[0]?.Notes; else noNotes">
+  <p [innerHTML]="todaysNotes[0].Notes | nl2br"></p>
+</div>
+        <ng-template #noNotes>
+          <div class="empty-notes">
+            <i class="fas fa-pen"></i>
+            <p>No notes for today. Click edit to add some!</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Notes Editor -->
+      <div class="notes-editor" *ngIf="showNotesEditor">
+        <textarea 
+          class="notes-textarea"
+          [(ngModel)]="newNotesContent"
+          placeholder="Add your notes for today..."
+          rows="6">
+        </textarea>
+        <div class="notes-actions">
+          <button class="btn-save" (click)="saveNotes()">
+            <i class="fas fa-save"></i>
+            Save Notes
+          </button>
+          <button class="btn-cancel" (click)="toggleNotesEditor()">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="quick-actions-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fas fa-bolt"></i>
+          Quick Actions
+        </h2>
+      </div>
+      
+      <div class="quick-actions-grid">
+        <button class="action-card" routerLink="/clients/create">
+          <div class="action-icon">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <span class="action-label">Add Client</span>
+        </button>
+        
+        <button class="action-card" routerLink="/appointments/create">
+          <div class="action-icon">
+            <i class="fas fa-calendar-plus"></i>
+          </div>
+          <span class="action-label">New Appointment</span>
+        </button>
+        
+        <button class="action-card" routerLink="/reminders/create">
+          <div class="action-icon">
+            <i class="fas fa-bell-plus"></i>
+          </div>
+          <span class="action-label">Set Reminder</span>
+        </button>
+        
+        <button class="action-card" routerLink="/policies">
+          <div class="action-icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <span class="action-label">View Policies</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+</div>

@@ -1,0 +1,191 @@
+<nav class="navbar-container">
+   
+  <div class="navbar-content">
+    <!-- Logo Section -->
+    <div class="navbar-brand">
+      <div class="brand-logo">
+        <div class="logo-icon">
+          <div class="logo-circle">
+            <div class="logo-dot"></div>
+          </div>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">AMINUS</h1>
+          <p class="brand-tagline">Trust, Care, Growth</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Navigation -->
+    <div class="navbar-nav desktop-nav">
+      <div class="nav-items">
+        <a 
+          *ngFor="let item of navigationItems" 
+          [class]="'nav-item ' + (item.isActive ? 'active' : '')"
+          (click)="navigateTo(item.route)"
+          [title]="item.label">
+          <i [class]="item.icon"></i>
+          <span class="nav-label">{{ item.label }}</span>
+          <span *ngIf="item.badge && item.badge > 0" class="nav-badge">
+            {{ item.badge > 99 ? '99+' : item.badge }}
+          </span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Quick Actions & Profile Section -->
+    <div class="navbar-actions">
+      <!-- Quick Actions Dropdown -->
+      <div class="quick-actions-dropdown">
+        <button class="quick-actions-btn" title="Quick Actions">
+          <i class="fas fa-plus"></i>
+          <span class="desktop-only">Quick Actions</span>
+        </button>
+        <div class="quick-actions-menu">
+          <div class="quick-actions-header">
+            <h4>Quick Actions</h4>
+          </div>
+          <div class="quick-actions-list">
+            <button 
+              *ngFor="let action of quickActions"
+              class="quick-action-item"
+              (click)="executeQuickAction(action.action)">
+              <div class="action-icon" [ngClass]="action.color">
+                <i [class]="action.icon"></i>
+              </div>
+              <span>{{ action.label }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="notification-btn" title="Notifications">
+        <button class="btn-icon">
+          <i class="fas fa-bell"></i>
+          <span class="notification-badge" *ngIf="getTotalBadgeCount() > 0">
+            {{ getTotalBadgeCount() > 99 ? '99+' : getTotalBadgeCount() }}
+          </span>
+        </button>
+      </div>
+
+      <!-- Profile Dropdown -->
+      <div class="profile-dropdown-container">
+        <button class="profile-btn" (click)="toggleProfileDropdown()">
+          <div class="profile-avatar">
+            <span>{{ getUserInitials() }}</span>
+          </div>
+          <div class="profile-info desktop-only">
+            <span class="profile-name">{{ currentUser.name }}</span>
+            <span class="profile-role">{{ currentUser.role }}</span>
+          </div>
+          <i class="fas fa-chevron-down profile-arrow" 
+             [class.rotated]="isProfileDropdownOpen"></i>
+        </button>
+
+        <div class="profile-dropdown" [class.open]="isProfileDropdownOpen">
+          <div class="profile-header">
+            <div class="profile-avatar large">
+              <span>{{ getUserInitials() }}</span>
+            </div>
+            <div class="profile-details">
+              <h4>{{ currentUser.name }}</h4>
+              <p>{{ currentUser.email }}</p>
+              <span class="role-badge">{{ currentUser.role }}</span>
+            </div>
+          </div>
+          
+          <div class="profile-menu">
+            <button class="profile-menu-item" (click)="goToProfile()">
+              <i class="fas fa-user"></i>
+              <span>My Profile</span>
+            </button>
+            <button class="profile-menu-item" (click)="goToSettings()">
+              <i class="fas fa-cog"></i>
+              <span>Settings</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button class="profile-menu-item logout" (click)="logout()">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Menu Toggle -->
+      <button class="mobile-menu-toggle mobile-only" (click)="toggleMobileMenu()">
+        <i class="fas" [class.fa-bars]="!isMenuOpen" [class.fa-times]="isMenuOpen"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Navigation Menu -->
+  <div class="mobile-nav" [class.open]="isMenuOpen">
+    <div class="mobile-nav-header">
+      <div class="user-info">
+        <div class="profile-avatar">
+          <span>{{ getUserInitials() }}</span>
+        </div>
+        <div class="user-details">
+          <h4>{{ currentUser.name }}</h4>
+          <p>{{ currentUser.role }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-nav-items">
+      <a 
+        *ngFor="let item of navigationItems" 
+        [class]="'mobile-nav-item ' + (item.isActive ? 'active' : '')"
+        (click)="navigateTo(item.route)">
+        <div class="nav-item-content">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </div>
+        <span *ngIf="item.badge && item.badge > 0" class="nav-badge">
+          {{ item.badge > 99 ? '99+' : item.badge }}
+        </span>
+      </a>
+    </div>
+
+    <div class="mobile-quick-actions">
+      <h5>Quick Actions</h5>
+      <div class="mobile-quick-actions-grid">
+        <button 
+          *ngFor="let action of quickActions"
+          class="mobile-quick-action"
+          (click)="executeQuickAction(action.action)">
+          <div class="action-icon" [ngClass]="action.color">
+            <i [class]="action.icon"></i>
+          </div>
+          <span>{{ action.label }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="mobile-nav-footer">
+      <button class="mobile-nav-item" (click)="goToProfile()">
+        <div class="nav-item-content">
+          <i class="fas fa-user"></i>
+          <span>My Profile</span>
+        </div>
+      </button>
+      <button class="mobile-nav-item" (click)="goToSettings()">
+        <div class="nav-item-content">
+          <i class="fas fa-cog"></i>
+          <span>Settings</span>
+        </div>
+      </button>
+      <button class="mobile-nav-item logout" (click)="logout()">
+        <div class="nav-item-content">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-overlay" [class.visible]="isMenuOpen" (click)="isMenuOpen = false"></div>
+</nav>

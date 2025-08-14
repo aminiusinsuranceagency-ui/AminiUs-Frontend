@@ -1,0 +1,248 @@
+<div class="login-wrapper">
+  <div class="background-pattern"></div>
+  
+  <div class="login-container" [@slideIn]>
+    <!-- Logo Section -->
+    <div class="logo-section">
+      <div class="logo" [@pulse]>
+        <div class="logo-inner">
+          <div class="logo-dot">
+            <img src="assets/favicon.ico" alt="Logo Icon" class="logo-icon">
+          </div>
+        </div>
+      </div>
+      <h1 class="brand-name">AMINiUS</h1>
+      <p class="brand-tagline">Trust, Care, Growth</p>
+    </div>
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <h2 class="welcome-title">{{ isFirstTime ? 'Join Aminus Today' : 'Welcome Back' }}</h2>
+      <p class="welcome-subtitle">
+        {{ isFirstTime 
+          ? 'Create your professional insurance sales profile to get started' 
+          : 'Sign in to access your insurance sales dashboard' 
+        }}
+      </p>
+    </div>
+
+    <!-- Auth Form -->
+    <form [formGroup]="authForm" (ngSubmit)="onSubmit()" class="login-form">
+      
+      <!-- Registration Fields -->
+      <div *ngIf="isFirstTime" class="form-section" [@expandCollapse]>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input 
+              type="text" 
+              id="firstName"
+              formControlName="firstName"
+              placeholder="Enter your first name"
+              [class.error]="isFieldInvalid('firstName')"
+              autocomplete="given-name"
+            >
+            <div *ngIf="isFieldInvalid('firstName')" class="error-message" [@fadeInOut]>
+              First name is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input 
+              type="text" 
+              id="lastName"
+              formControlName="lastName"
+              placeholder="Enter your last name"
+              [class.error]="isFieldInvalid('lastName')"
+              autocomplete="family-name"
+            >
+            <div *ngIf="isFieldInvalid('lastName')" class="error-message" [@fadeInOut]>
+              Last name is required
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input 
+            type="tel" 
+            id="phone"
+            formControlName="phone"
+            placeholder="Enter your phone number (e.g., 0712345678)"
+            [class.error]="isFieldInvalid('phone')"
+            autocomplete="tel"
+          >
+          <div *ngIf="isFieldInvalid('phone')" class="error-message" [@fadeInOut]>
+            Phone number is required
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Field (Always visible) -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input 
+          type="email" 
+          id="email"
+          formControlName="email"
+          placeholder="Enter your email address"
+          [class.error]="isFieldInvalid('email')"
+          autocomplete="email"
+        >
+        <div *ngIf="isFieldInvalid('email')" class="error-message" [@fadeInOut]>
+          <span *ngIf="authForm.get('email')?.errors?.['required']">Email is required</span>
+          <span *ngIf="authForm.get('email')?.errors?.['email']">Please enter a valid email</span>
+        </div>
+      </div>
+
+      <!-- Password Section (Always visible) -->
+      <div class="form-group">
+        <label for="password">{{ isFirstTime ? 'Create Password' : 'Password' }}</label>
+        <div class="password-input-container">
+          <input 
+            [type]="showPassword ? 'text' : 'password'" 
+            id="password"
+            formControlName="password"
+            [placeholder]="isFirstTime ? 'Create a secure password (min. 6 characters)' : 'Enter your password'"
+            [class.error]="isFieldInvalid('password')"
+            autocomplete="current-password"
+          >
+          <button 
+            type="button" 
+            class="password-toggle"
+            (click)="togglePasswordVisibility()"
+            aria-label="Toggle password visibility"
+            tabindex="-1"
+          >
+            <i class="fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+          </button>
+        </div>
+        <div *ngIf="isFieldInvalid('password')" class="error-message" [@fadeInOut]>
+          <span *ngIf="authForm.get('password')?.errors?.['required']">Password is required</span>
+          <span *ngIf="authForm.get('password')?.errors?.['minlength']">Password must be at least 6 characters</span>
+        </div>
+      </div>
+
+      <!-- Confirm Password (Registration only) -->
+      <div *ngIf="isFirstTime" class="form-group" [@expandCollapse]>
+        <label for="confirmPassword">Confirm Password</label>
+        <div class="password-input-container">
+          <input 
+            [type]="showConfirmPassword ? 'text' : 'password'" 
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            placeholder="Confirm your password"
+            [class.error]="isFieldInvalid('confirmPassword') || hasPasswordMismatch()"
+            autocomplete="new-password"
+          >
+          <button 
+            type="button" 
+            class="password-toggle"
+            (click)="toggleConfirmPasswordVisibility()"
+            aria-label="Toggle confirm password visibility"
+            tabindex="-1"
+          >
+            <i class="fas" [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"></i>
+          </button>
+        </div>
+        <div *ngIf="isFieldInvalid('confirmPassword') && !hasPasswordMismatch()" class="error-message" [@fadeInOut]>
+          Confirm password is required
+        </div>
+        <div *ngIf="hasPasswordMismatch()" class="error-message" [@fadeInOut]>
+          Passwords do not match
+        </div>
+      </div>
+
+      <!-- Remember Me / Forgot Password (Login only) -->
+      <div *ngIf="!isFirstTime" class="form-options" [@expandCollapse]>
+        <label class="checkbox-container">
+          <input type="checkbox" formControlName="rememberMe">
+          <span class="checkmark"></span>
+          Remember me
+        </label>
+        <button 
+          type="button" 
+          class="forgot-password" 
+          (click)="onForgotPassword()"
+          [disabled]="isLoading"
+        >
+          Forgot Password?
+        </button>
+      </div>
+
+      <!-- Submit Button -->
+      <button 
+        type="submit" 
+        class="submit-btn"
+        [class.valid]="canSubmit"
+        [class.invalid]="!isFormValid"
+        [class.loading]="isLoading"
+        [disabled]="!canSubmit"
+      >
+        <div *ngIf="isLoading" class="loading-spinner"></div>
+        <span class="btn-text">
+          {{ isFirstTime ? (isLoading ? 'Creating Account...' : 'Create Account') : (isLoading ? 'Signing In...' : 'Sign In') }}
+        </span>
+      </button>
+
+      <!-- Toggle Mode Button -->
+      <div class="toggle-mode">
+        <p>
+          {{ isFirstTime ? 'Already have an account?' : 'New to Aminus?' }}
+          <button 
+            type="button" 
+            class="link-btn" 
+            (click)="toggleMode()"
+            [disabled]="isLoading"
+          >
+            {{ isFirstTime ? 'Sign in here' : 'Create your account' }}
+          </button>
+        </p>
+      </div>
+    </form>
+
+    <!-- Development/Debug Section (Remove in production) -->
+    <div class="debug-section" *ngIf="false">
+      <button type="button" class="debug-btn" (click)="debugAuth()">Debug Auth</button>
+      <button type="button" class="debug-btn" (click)="clearAllData()">Clear All Data</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>&copy; 2025 Aminus. Professional Insurance Sales Platform</p>
+    </div>
+  </div>
+</div>
+
+<!-- Success/Error/Welcome Messages -->
+<div *ngIf="showMessage" class="message-overlay" [@messageSlide] (click)="showMessage = false">
+  <div class="message-container" [ngClass]="messageType" [@fadeInOut] (click)="$event.stopPropagation()">
+    <div class="message-content">
+      <span class="message-icon">
+        <i class="fas" 
+           [class.fa-check-circle]="messageType === 'success'" 
+           [class.fa-party-horn]="messageType === 'welcome'"
+           [class.fa-exclamation-circle]="messageType === 'error'">
+        </i>
+      </span>
+      <div class="message-text">
+        <h3 *ngIf="messageType === 'welcome'" class="message-title">
+          {{ isFirstTime ? 'Account Created!' : 'Welcome Back!' }}
+        </h3>
+        <h3 *ngIf="messageType === 'success'" class="message-title">Success!</h3>
+        <h3 *ngIf="messageType === 'error'" class="message-title">Error</h3>
+        <p>{{ messageText }}</p>
+      </div>
+      <button 
+        type="button" 
+        class="message-close" 
+        (click)="showMessage = false"
+        aria-label="Close message"
+      >
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div *ngIf="messageType === 'welcome'" class="message-progress"></div>
+  </div>
+</div>

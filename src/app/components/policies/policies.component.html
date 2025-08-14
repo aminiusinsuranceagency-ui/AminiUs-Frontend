@@ -1,0 +1,998 @@
+<!-- policies.component.html -->
+<div class="policies-container">
+  <app-navbar></app-navbar>
+  
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="page-title">
+      <h1><i class="fas fa-shield-alt"></i> Policy Management</h1>
+      <p>Manage your insurance policies, catalog, templates, and reference data</p>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn btn-outline" (click)="refreshData()">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+      <button class="btn btn-outline" (click)="exportPolicies('csv')">
+        <i class="fas fa-download"></i> Export CSV
+      </button>
+      <button class="btn btn-outline" (click)="exportPolicies('json')">
+        <i class="fas fa-download"></i> Export JSON
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tab-navigation">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'dashboard'"
+      (click)="setActiveTab('dashboard')">
+      <i class="fas fa-chart-pie"></i> Dashboard
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'policies'"
+      (click)="setActiveTab('policies')">
+      <i class="fas fa-file-contract"></i> Client Policies
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'catalog'"
+      (click)="setActiveTab('catalog')">
+      <i class="fas fa-list"></i> Policy Catalog
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'templates'"
+      (click)="setActiveTab('templates')">
+      <i class="fas fa-file-medical"></i> Templates
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'companies'"
+      (click)="setActiveTab('companies')">
+      <i class="fas fa-building"></i> Companies
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'types'"
+      (click)="setActiveTab('types')">
+      <i class="fas fa-tags"></i> Types
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'categories'"
+      (click)="setActiveTab('categories')">
+      <i class="fas fa-folder"></i> Categories
+    </button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading" class="loading-spinner">
+    <i class="fas fa-spinner fa-spin"></i> Loading...
+  </div>
+
+  <!-- Dashboard Tab -->
+  <div *ngIf="activeTab === 'dashboard' && !isLoading" class="tab-content">
+    <div class="dashboard-grid" *ngIf="dashboardSummary">
+      <div class="dashboard-card">
+        <div class="card-icon blue">
+          <i class="fas fa-file-contract"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.totalPolicies }}</h3>
+          <p>Total Policies</p>
+        </div>
+      </div>
+      
+      <div class="dashboard-card">
+        <div class="card-icon green">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.activePolicies }}</h3>
+          <p>Active Policies</p>
+        </div>
+      </div>
+      
+      <div class="dashboard-card">
+        <div class="card-icon orange">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.expiringIn30Days }}</h3>
+          <p>Expiring in 30 Days</p>
+        </div>
+      </div>
+      
+      <div class="dashboard-card">
+        <div class="card-icon red">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.expiringIn60Days }}</h3>
+          <p>Expiring in 60 Days</p>
+        </div>
+      </div>
+      
+      <div class="dashboard-card">
+        <div class="card-icon purple">
+          <i class="fas fa-building"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.totalCompanies }}</h3>
+          <p>Insurance Companies</p>
+        </div>
+      </div>
+      
+      <div class="dashboard-card">
+        <div class="card-icon teal">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ dashboardSummary.totalClients }}</h3>
+          <p>Total Clients</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Policies Tab -->
+  <div *ngIf="activeTab === 'policies' && !isLoading" class="tab-content">
+    <!-- Search and Filter Section -->
+    <div class="search-filter-section">
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+       <input 
+  type="text" 
+  placeholder="Search policies..." 
+  [(ngModel)]="searchTerm"
+  (input)="onSearchChange(searchTerm)">
+
+
+      </div>
+      
+      <div class="filters">
+        <select [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+          <option value="">All Statuses</option>
+          <option *ngFor="let status of policyStatuses" [value]="status">{{ status }}</option>
+        </select>
+        
+        <select [(ngModel)]="selectedCompany" (change)="onFilterChange()">
+          <option value="">All Companies</option>
+          <option *ngFor="let company of companies" [value]="company.companyId">
+            {{ company.companyName }}
+          </option>
+        </select>
+        
+        <select [(ngModel)]="selectedType" (change)="onFilterChange()">
+          <option value="">All Types</option>
+          <option *ngFor="let type of policyTypes" [value]="type.typeId">
+            {{ type.typeName }}
+          </option>
+        </select>
+        
+        <button class="btn btn-secondary" (click)="clearFilters()">
+          <i class="fas fa-times"></i> Clear
+        </button>
+      </div>
+    </div>
+    
+    <!-- Actions Section -->
+    <div class="actions-section">
+      <div class="bulk-actions" *ngIf="selectedPolicyIds.length > 0">
+        <span>{{ selectedPolicyIds.length }} policies selected</span>
+        <button class="btn btn-success" (click)="bulkActivatePolicies()">
+          <i class="fas fa-check"></i> Activate
+        </button>
+        <button class="btn btn-warning" (click)="bulkDeactivatePolicies()">
+          <i class="fas fa-times"></i> Deactivate
+        </button>
+      </div>
+      
+      <button class="btn btn-primary" (click)="openClientPolicyModal()">
+        <i class="fas fa-plus"></i> Add Policy
+      </button>
+    </div>
+    
+    <!-- Policies Table -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>
+              <input 
+                type="checkbox" 
+                [checked]="selectedPolicyIds.length === filteredPolicies.length && filteredPolicies.length > 0"
+                (change)="selectAllPolicies()">
+            </th>
+            <th>Policy Name</th>
+            <th>Status</th>
+            <th>Company</th>
+            <th>Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Days to Expiry</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let policy of filteredPolicies" 
+              [class.expired]="isPolicyExpired(policy)"
+              [class.expiring-soon]="isPolicyExpiringSoon(policy)">
+            <td>
+              <input 
+                type="checkbox" 
+                [checked]="selectedPolicyIds.includes(policy.policyId)"
+                (change)="togglePolicySelection(policy.policyId)">
+            </td>
+            <td>
+              <strong>{{ policy.policyName }}</strong>
+              <div class="policy-notes" *ngIf="policy.notes">{{ policy.notes }}</div>
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="getPolicyStatusColor(policy)">
+                {{ policy.status }}
+              </span>
+            </td>
+            <td>{{ policy.companyName || 'N/A' }}</td>
+            <td>{{ policy.typeName || 'N/A' }}</td>
+            <td>{{ policy.startDate | date:'shortDate' }}</td>
+            <td>{{ policy.endDate | date:'shortDate' }}</td>
+            <td>
+              <span *ngIf="getDaysUntilExpiry(policy) !== null" 
+                    [ngClass]="{'text-danger': getDaysUntilExpiry(policy)! < 0, 
+                               'text-warning': getDaysUntilExpiry(policy)! >= 0 && getDaysUntilExpiry(policy)! <= 30}">
+                {{ getDaysUntilExpiry(policy) }} days
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="openClientPolicyModal(policy)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-success" (click)="renewPolicy(policy)" 
+                        *ngIf="isPolicyExpiringSoon(policy) || isPolicyExpired(policy)">
+                  <i class="fas fa-redo"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteClientPolicy(policy)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredPolicies.length === 0">
+            <td colspan="9" class="no-data">
+              <i class="fas fa-inbox"></i>
+              <p>No policies found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Policy Catalog Tab -->
+  <div *ngIf="activeTab === 'catalog' && !isLoading" class="tab-content">
+    <div class="section-header">
+      <h2><i class="fas fa-list"></i> Policy Catalog</h2>
+      <button class="btn btn-primary" (click)="openCatalogModal()">
+        <i class="fas fa-plus"></i> Add to Catalog
+      </button>
+    </div>
+    
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Policy Name</th>
+            <th>Company</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Created Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredCatalog">
+            <td>
+              <strong>{{ item.policyName }}</strong>
+              <div class="policy-notes" *ngIf="item.notes">{{ item.notes }}</div>
+            </td>
+            <td>{{ item.companyName || 'N/A' }}</td>
+            <td>{{ item.typeName || 'N/A' }}</td>
+            <td>{{ item.categoryName || 'N/A' }}</td>
+            <td>{{ item.createdDate | date:'shortDate' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="item.isActive ? 'success' : 'secondary'">
+                {{ item.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="openCatalogModal(item)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteCatalogItem(item)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredCatalog.length === 0">
+            <td colspan="7" class="no-data">
+              <i class="fas fa-inbox"></i>
+              <p>No catalog items found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Templates Tab -->
+  <div *ngIf="activeTab === 'templates' && !isLoading" class="tab-content">
+    <div class="section-header">
+      <h2><i class="fas fa-file-medical"></i> Policy Templates</h2>
+      <button class="btn btn-primary" (click)="openTemplateModal()">
+        <i class="fas fa-plus"></i> Add Template
+      </button>
+    </div>
+    
+    <div class="templates-grid">
+      <div *ngFor="let template of policyTemplates" class="template-card">
+        <div class="template-header">
+          <h3>{{ template.templateName }}</h3>
+          <div class="template-actions">
+            <button class="btn btn-sm btn-outline" (click)="openTemplateModal(template)">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteTemplate(template)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="template-details">
+          <p *ngIf="template.defaultTermMonths"><strong>Term:</strong> {{ template.defaultTermMonths }} months</p>
+          <p *ngIf="template.defaultPremium"><strong>Premium:</strong> ${{ template.defaultPremium }}</p>
+          <p *ngIf="template.coverageDescription"><strong>Coverage:</strong> {{ template.coverageDescription }}</p>
+          <p *ngIf="template.categoryName"><strong>Category:</strong> {{ template.categoryName }}</p>
+          <p *ngIf="template.typeName"><strong>Type:</strong> {{ template.typeName }}</p>
+        </div>
+        <div class="template-status">
+          <span class="status-badge" [ngClass]="template.isActive ? 'success' : 'secondary'">
+            {{ template.isActive ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+      </div>
+      
+      <div *ngIf="policyTemplates.length === 0" class="no-data">
+        <i class="fas fa-file-medical"></i>
+        <p>No templates found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Companies Tab -->
+  <div *ngIf="activeTab === 'companies' && !isLoading" class="tab-content">
+    <div class="section-header">
+      <h2><i class="fas fa-building"></i> Insurance Companies</h2>
+      <button class="btn btn-primary" (click)="openCompanyModal()">
+        <i class="fas fa-plus"></i> Add Company
+      </button>
+    </div>
+    
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Company Name</th>
+            <th>Created Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let company of companies">
+            <td><strong>{{ company.companyName }}</strong></td>
+            <td>{{ company.createdDate | date:'shortDate' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="company.isActive ? 'success' : 'secondary'">
+                {{ company.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="openCompanyModal(company)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteCompany(company)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="companies.length === 0">
+            <td colspan="4" class="no-data">
+              <i class="fas fa-building"></i>
+              <p>No companies found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Types Tab -->
+  <div *ngIf="activeTab === 'types' && !isLoading" class="tab-content">
+    <div class="section-header">
+      <h2><i class="fas fa-tags"></i> Policy Types</h2>
+      <button class="btn btn-primary" (click)="openTypeModal()">
+        <i class="fas fa-plus"></i> Add Type
+      </button>
+    </div>
+    
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type Name</th>
+            <th>Created Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let type of policyTypes">
+            <td><strong>{{ type.typeName }}</strong></td>
+            <td>{{ type.createdDate | date:'shortDate' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="type.isActive ? 'success' : 'secondary'">
+                {{ type.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="openTypeModal(type)">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="policyTypes.length === 0">
+            <td colspan="4" class="no-data">
+              <i class="fas fa-tags"></i>
+              <p>No policy types found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Categories Tab -->
+  <div *ngIf="activeTab === 'categories' && !isLoading" class="tab-content">
+    <div class="section-header">
+      <h2><i class="fas fa-folder"></i> Policy Categories</h2>
+      <button class="btn btn-primary" (click)="openCategoryModal()">
+        <i class="fas fa-plus"></i> Add Category
+      </button>
+    </div>
+    
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Category Name</th>
+            <th>Description</th>
+            <th>Created Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let category of policyCategories">
+            <td><strong>{{ category.categoryName }}</strong></td>
+            <td>{{ category.description || 'N/A' }}</td>
+            <td>{{ category.createdDate | date:'shortDate' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="category.isActive ? 'success' : 'secondary'">
+                {{ category.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="openCategoryModal(category)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteCategory(category)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="policyCategories.length === 0">
+            <td colspan="5" class="no-data">
+              <i class="fas fa-folder"></i>
+              <p>No categories found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Client Policy Modal -->
+<div *ngIf="showClientPolicyModal" class="modal-overlay" (click)="closeClientPolicyModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-file-contract"></i>
+        {{ editingPolicy ? 'Edit Policy' : 'Add New Policy' }}
+      </h3>
+      <button class="modal-close" (click)="closeClientPolicyModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="clientPolicyForm" (ngSubmit)="onSubmitClientPolicy()" class="modal-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="clientId">Client ID *</label>
+          <input 
+            type="text" 
+            id="clientId"
+            formControlName="clientId"
+            [class.invalid]="isFieldInvalid(clientPolicyForm, 'clientId')"
+            placeholder="Enter client ID">
+          <div *ngIf="isFieldInvalid(clientPolicyForm, 'clientId')" class="error-message">
+            {{ getFieldError(clientPolicyForm, 'clientId') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="policyName">Policy Name *</label>
+          <input 
+            type="text" 
+            id="policyName"
+            formControlName="policyName"
+            [class.invalid]="isFieldInvalid(clientPolicyForm, 'policyName')"
+            placeholder="Enter policy name">
+          <div *ngIf="isFieldInvalid(clientPolicyForm, 'policyName')" class="error-message">
+            {{ getFieldError(clientPolicyForm, 'policyName') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status" formControlName="status">
+            <option *ngFor="let status of policyStatuses" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="companyId">Insurance Company</label>
+          <select
+  id="companyId"
+  formControlName="companyId"
+  (change)="onCompanySelect($event, clientPolicyForm)"
+>
+  <option value="">Select a company</option>
+  <option *ngFor="let company of autocompleteCompanies" [value]="company.companyId">
+    {{ company.companyName }}
+  </option>
+</select>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="typeId">Policy Type</label>
+<select
+id="typeId"
+formControlName="typeId"
+(change)="onTypeSelect($event, clientPolicyForm)"
+>
+<option value="">Select a type</option>
+<option *ngFor="let type of autocompleteTypes" [value]="type.typeId">
+{{ type.typeName }}
+</option>
+</select>
+        </div>
+        
+        <div class="form-group">
+          <label for="policyCatalogId">Policy Catalog</label>
+          <select id="policyCatalogId" formControlName="policyCatalogId">
+            <option value="">Select from catalog</option>
+            <option *ngFor="let item of autocompleteCatalog" [value]="item.policyCatalogId">
+              {{ item.policyName }}
+            </option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="startDate">Start Date *</label>
+          <input 
+            type="date" 
+            id="startDate"
+            formControlName="startDate"
+            [class.invalid]="isFieldInvalid(clientPolicyForm, 'startDate')">
+          <div *ngIf="isFieldInvalid(clientPolicyForm, 'startDate')" class="error-message">
+            {{ getFieldError(clientPolicyForm, 'startDate') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="endDate">End Date *</label>
+          <input 
+            type="date" 
+            id="endDate"
+            formControlName="endDate"
+            [class.invalid]="isFieldInvalid(clientPolicyForm, 'endDate')">
+          <div *ngIf="isFieldInvalid(clientPolicyForm, 'endDate')" class="error-message">
+            {{ getFieldError(clientPolicyForm, 'endDate') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea 
+          id="notes"
+          formControlName="notes"
+          rows="3"
+          placeholder="Enter any additional notes"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeClientPolicyModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingPolicy ? 'Update Policy' : 'Create Policy') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Catalog Modal -->
+<div *ngIf="showCatalogModal" class="modal-overlay" (click)="closeCatalogModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-list"></i>
+        {{ editingCatalogItem ? 'Edit Catalog Item' : 'Add to Catalog' }}
+      </h3>
+      <button class="modal-close" (click)="closeCatalogModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="catalogForm" (ngSubmit)="onSubmitCatalog()" class="modal-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="catalogPolicyName">Policy Name *</label>
+          <input 
+            type="text" 
+            id="catalogPolicyName"
+            formControlName="policyName"
+            [class.invalid]="isFieldInvalid(catalogForm, 'policyName')"
+            placeholder="Enter policy name">
+          <div *ngIf="isFieldInvalid(catalogForm, 'policyName')" class="error-message">
+            {{ getFieldError(catalogForm, 'policyName') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="catalogCompanyId">Insurance Company *</label>
+          <select 
+            id="catalogCompanyId" 
+            formControlName="companyId"
+            [class.invalid]="isFieldInvalid(catalogForm, 'companyId')">
+            <option value="">Select a company</option>
+            <option *ngFor="let company of autocompleteCompanies" [value]="company.companyId">
+              {{ company.companyName }}
+            </option>
+          </select>
+          <div *ngIf="isFieldInvalid(catalogForm, 'companyId')" class="error-message">
+            {{ getFieldError(catalogForm, 'companyId') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="catalogTypeId">Policy Type</label>
+          <select id="catalogTypeId" formControlName="typeId">
+            <option value="">Select a type</option>
+            <option *ngFor="let type of autocompleteTypes" [value]="type.typeId">
+              {{ type.typeName }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="catalogCategoryId">Category</label>
+          <select id="catalogCategoryId" formControlName="categoryId">
+            <option value="">Select a category</option>
+            <option *ngFor="let category of autocompleteCategories" [value]="category.categoryId">
+              {{ category.categoryName }}
+            </option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="catalogNotes">Notes</label>
+        <textarea 
+          id="catalogNotes"
+          formControlName="notes"
+          rows="3"
+          placeholder="Enter any additional notes"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCatalogModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingCatalogItem ? 'Update Item' : 'Add to Catalog') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Template Modal -->
+<div *ngIf="showTemplateModal" class="modal-overlay" (click)="closeTemplateModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-file-medical"></i>
+        {{ editingTemplate ? 'Edit Template' : 'Add Template' }}
+      </h3>
+      <button class="modal-close" (click)="closeTemplateModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="templateForm" (ngSubmit)="onSubmitTemplate()" class="modal-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="templateName">Template Name *</label>
+          <input 
+            type="text" 
+            id="templateName"
+            formControlName="templateName"
+            [class.invalid]="isFieldInvalid(templateForm, 'templateName')"
+            placeholder="Enter template name">
+          <div *ngIf="isFieldInvalid(templateForm, 'templateName')" class="error-message">
+            {{ getFieldError(templateForm, 'templateName') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="defaultTermMonths">Default Term (Months)</label>
+          <input 
+            type="number" 
+            id="defaultTermMonths"
+            formControlName="defaultTermMonths"
+            min="1"
+            placeholder="12">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="defaultPremium">Default Premium</label>
+          <input 
+            type="number" 
+            id="defaultPremium"
+            formControlName="defaultPremium"
+            min="0"
+            step="0.01"
+            placeholder="0.00">
+        </div>
+        
+        <div class="form-group">
+          <label for="templateTypeId">Policy Type</label>
+          <select id="templateTypeId" formControlName="typeId">
+            <option value="">Select a type</option>
+            <option *ngFor="let type of autocompleteTypes" [value]="type.typeId">
+              {{ type.typeName }}
+            </option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="templateCategoryId">Category</label>
+          <select id="templateCategoryId" formControlName="categoryId">
+            <option value="">Select a category</option>
+            <option *ngFor="let category of autocompleteCategories" [value]="category.categoryId">
+              {{ category.categoryName }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="templatePolicyCatalogId">Policy Catalog</label>
+          <select id="templatePolicyCatalogId" formControlName="policyCatalogId">
+            <option value="">Select from catalog</option>
+            <option *ngFor="let item of autocompleteCatalog" [value]="item.policyCatalogId">
+              {{ item.policyName }}
+            </option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="coverageDescription">Coverage Description</label>
+        <textarea 
+          id="coverageDescription"
+          formControlName="coverageDescription"
+          rows="3"
+          placeholder="Describe the coverage details"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="terms">Terms & Conditions</label>
+        <textarea 
+          id="terms"
+          formControlName="terms"
+          rows="4"
+          placeholder="Enter terms and conditions"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeTemplateModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingTemplate ? 'Update Template' : 'Create Template') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Company Modal -->
+<div *ngIf="showCompanyModal" class="modal-overlay" (click)="closeCompanyModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-building"></i>
+        {{ editingCompany ? 'Edit Company' : 'Add Company' }}
+      </h3>
+      <button class="modal-close" (click)="closeCompanyModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="companyForm" (ngSubmit)="onSubmitCompany()" class="modal-form">
+      <div class="form-group">
+        <label for="companyName">Company Name *</label>
+        <input 
+          type="text" 
+          id="companyName"
+          formControlName="companyName"
+          [class.invalid]="isFieldInvalid(companyForm, 'companyName')"
+          placeholder="Enter company name">
+        <div *ngIf="isFieldInvalid(companyForm, 'companyName')" class="error-message">
+          {{ getFieldError(companyForm, 'companyName') }}
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCompanyModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingCompany ? 'Update Company' : 'Create Company') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Type Modal -->
+<div *ngIf="showTypeModal" class="modal-overlay" (click)="closeTypeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-tags"></i>
+        {{ editingType ? 'Edit Policy Type' : 'Add Policy Type' }}
+      </h3>
+      <button class="modal-close" (click)="closeTypeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="typeForm" (ngSubmit)="onSubmitType()" class="modal-form">
+      <div class="form-group">
+        <label for="typeName">Type Name *</label>
+        <input 
+          type="text" 
+          id="typeName"
+          formControlName="typeName"
+          [class.invalid]="isFieldInvalid(typeForm, 'typeName')"
+          placeholder="Enter policy type name">
+        <div *ngIf="isFieldInvalid(typeForm, 'typeName')" class="error-message">
+          {{ getFieldError(typeForm, 'typeName') }}
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeTypeModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingType ? 'Update Type' : 'Create Type') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div *ngIf="showCategoryModal" class="modal-overlay" (click)="closeCategoryModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-folder"></i>
+        {{ editingCategory ? 'Edit Category' : 'Add Category' }}
+      </h3>
+      <button class="modal-close" (click)="closeCategoryModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="categoryForm" (ngSubmit)="onSubmitCategory()" class="modal-form">
+      <div class="form-group">
+        <label for="categoryName">Category Name *</label>
+        <input 
+          type="text" 
+          id="categoryName"
+          formControlName="categoryName"
+          [class.invalid]="isFieldInvalid(categoryForm, 'categoryName')"
+          placeholder="Enter category name">
+        <div *ngIf="isFieldInvalid(categoryForm, 'categoryName')" class="error-message">
+          {{ getFieldError(categoryForm, 'categoryName') }}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="categoryDescription">Description</label>
+        <textarea 
+          id="categoryDescription"
+          formControlName="description"
+          rows="3"
+          placeholder="Enter category description"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCategoryModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (editingCategory ? 'Update Category' : 'Create Category') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
