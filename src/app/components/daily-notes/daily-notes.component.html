@@ -1,0 +1,195 @@
+<!-- daily-notes.component.html -->
+<div class="notes-container">
+  <!-- Header -->
+  <header class="notes-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="back-btn" (click)="logout()">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="header-info">
+          <h1 class="app-title">Daily Notes</h1>
+          <p class="user-welcome">Welcome, {{ userName }}</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" (click)="toggleSearch()" [class.active]="showSearch">
+          <i class="fas fa-search"></i>
+        </button>
+        <button class="action-btn" (click)="toggleAllNotes()" [class.active]="showAllNotes">
+          <i class="fas fa-list"></i>
+        </button>
+        <button class="action-btn" (click)="toggleDateFilter()" [class.active]="showDateFilter">
+          <i class="fas fa-filter"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Success/Error Messages -->
+  <div class="message-container">
+    <div class="success-message" [class.show]="showSuccess">
+      <i class="fas fa-check-circle"></i>
+      <span>Changes saved successfully!</span>
+    </div>
+    <div class="error-message" [class.show]="showError">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="search-panel" [class.show]="showSearch">
+    <div class="search-input-container">
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search your notes..."
+        [(ngModel)]="searchTerm"
+        (input)="searchNotes()"
+      >
+      <i class="fas fa-search search-icon"></i>
+    </div>
+    
+    <div class="search-results" *ngIf="searchResults.length > 0">
+      <div class="search-result" *ngFor="let result of searchResults" (click)="selectSearchResult(result)">
+        <div class="result-date">
+          <i class="fas fa-calendar-alt"></i>
+          {{ formatDisplayDate(result.NoteDate) }}
+        </div>
+        <div class="result-preview">{{ result.Notes | slice:0:100 }}...</div>
+      </div>
+    </div>
+    
+    <div class="no-results" *ngIf="searchTerm && searchResults.length === 0 && !isSearching">
+      <i class="fas fa-search"></i>
+      <p>No notes found matching "{{ searchTerm }}"</p>
+    </div>
+    
+    <div class="loading" *ngIf="isSearching">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Searching...</span>
+    </div>
+  </div>
+
+  <!-- Date Filter Panel -->
+  <div class="date-filter-panel" [class.show]="showDateFilter">
+    <div class="filter-content">
+      <h3>Filter by Date Range</h3>
+      <div class="date-inputs">
+        <div class="date-input-group">
+          <label>From:</label>
+          <input type="date" [(ngModel)]="startDate" class="date-input">
+        </div>
+        <div class="date-input-group">
+          <label>To:</label>
+          <input type="date" [(ngModel)]="endDate" class="date-input">
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-secondary" (click)="clearDateFilter()">Clear</button>
+        <button class="btn btn-primary" (click)="applyDateFilter()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Notes View -->
+  <div class="all-notes-panel" [class.show]="showAllNotes">
+    <div class="panel-header">
+      <h3>All Notes</h3>
+      <span class="notes-count" *ngIf="allNotes.length > 0">{{ allNotes.length }} notes</span>
+    </div>
+    
+    <div class="notes-list" *ngIf="allNotes.length > 0">
+      <div class="note-item" *ngFor="let note of allNotes" (click)="selectNoteFromAll(note)">
+        <div class="note-header">
+          <div class="note-date">
+            <i class="fas fa-calendar-day"></i>
+            {{ formatDisplayDate(note.NoteDate) }}
+          </div>
+         <div class="note-time">
+              <i class="fas fa-clock"></i>
+              {{ formatNoteTime(note.ModifiedDate) }}
+         </div>
+
+        </div>
+        <div class="note-preview">{{ note.Notes | slice:0:120 }}...</div>
+      </div>
+    </div>
+    
+    <div class="no-notes" *ngIf="allNotes.length === 0 && !isLoading">
+      <i class="fas fa-sticky-note"></i>
+      <p>No notes found</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content" [class.panel-open]="showSearch || showAllNotes || showDateFilter">
+    <!-- Date Navigation -->
+    <div class="date-navigation">
+      <button class="nav-btn" (click)="goToPreviousDay()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      
+      <div class="current-date">
+        <input 
+          type="date" 
+          class="date-picker" 
+          [(ngModel)]="selectedDate"
+          (change)="onDateChange()"
+        >
+        <div class="date-display">
+          {{ formatDisplayDate(selectedDate) }}
+        </div>
+      </div>
+      
+      <button class="nav-btn" (click)="goToNextDay()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <button class="today-btn" (click)="goToToday()" [class.active]="selectedDate === currentDate">
+      <i class="fas fa-home"></i>
+      Today
+    </button>
+
+    <!-- Notes Editor -->
+    <div class="notes-editor">
+      <div class="editor-header">
+        <h2>Notes for {{ formatDisplayDate(selectedDate) }}</h2>
+        <div class="editor-actions">
+          <button class="btn btn-danger" (click)="deleteNotes()" [disabled]="!notes.trim() || isLoading">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button class="btn btn-primary" (click)="saveNotes()" [disabled]="isSaving">
+            <i class="fas fa-save" [class.fa-spinner]="isSaving" [class.fa-spin]="isSaving"></i>
+            {{ isSaving ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-container">
+        <textarea 
+          class="notes-textarea"
+          placeholder="Start writing your notes for today..."
+          [(ngModel)]="notes"
+          [disabled]="isLoading"
+        ></textarea>
+        
+        <div class="editor-footer">
+          <div class="word-count">
+            {{ notes.length }} characters
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Loading...</span>
+    </div>
+  </div>
+</div>

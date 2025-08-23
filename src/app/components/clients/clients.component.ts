@@ -4,6 +4,8 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { NavbarComponent } from "../navbar/navbar.component";
 import { ClientsService } from '../../services/clients.service';
 import { SessionService } from '../../services/session.service';
+import { ActivatedRoute, Router } from '@angular/router';
+
 import { Subject, takeUntil, catchError, of, finalize } from 'rxjs';
 import {
   Client,
@@ -14,6 +16,7 @@ import {
   ClientStatistics,
   Birthday
 } from '../../interfaces/client';
+import { ToastService } from '../../services/toast.service';
 
 // Keep the interfaces for backward compatibility with the template
 export interface Policy {
@@ -57,7 +60,7 @@ export interface ClientDisplay {
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NavbarComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.css',
   encapsulation: ViewEncapsulation.None
@@ -89,8 +92,16 @@ export class ClientsComponent implements OnInit, OnDestroy {
   // Agent ID from session
   agentId: string | null = null;
 
+
+  appointmentForm!: FormGroup;   // ✅ Angular form group, not Partial<Appointment>
+  clientId!: string | null;
+
   constructor(
+    private toastService: ToastService,
+
+    private router: Router,
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private clientsService: ClientsService,
     private sessionService: SessionService
   ) {
@@ -421,6 +432,14 @@ onSubmit(): void {
           catchError((error) => {
             console.error('Error creating client:', error);
             this.error = 'Failed to create client. Please try again.';
+
+            this.toastService.show({
+              type: 'error',
+              title: 'Error',
+              message: 'Failed to create client. Please try again.',
+              duration: 4000
+            });
+
             return of(null);
           }),
           finalize(() => this.loading = false)
@@ -430,17 +449,24 @@ onSubmit(): void {
             this.closeAddModal();
             this.loadClients();
             this.loadStatistics();
+
+            this.toastService.show({
+              type: 'success',
+              title: 'Client Added',
+              message: 'New client created successfully!',
+              duration: 4000
+            });
           }
         });
 
     } else if (this.showEditModal && this.selectedClient) {
-      // UPDATE existing client — ensure ClientId is included
+      // UPDATE existing client
       const updateRequest: UpdateClientRequest = {
         ...this.mapDisplayClientToBackend(
           { ...this.selectedClient, ...formData },
           false
         ),
-        ClientId: this.selectedClient.id // explicitly map from display model
+        ClientId: this.selectedClient.id
       };
 
       this.clientsService.update(updateRequest)
@@ -449,6 +475,14 @@ onSubmit(): void {
           catchError((error) => {
             console.error('Error updating client:', error);
             this.error = 'Failed to update client. Please try again.';
+
+            this.toastService.show({
+              type: 'error',
+              title: 'Error',
+              message: 'Failed to update client. Please try again.',
+              duration: 4000
+            });
+
             return of(null);
           }),
           finalize(() => this.loading = false)
@@ -458,54 +492,105 @@ onSubmit(): void {
             this.closeEditModal();
             this.loadClients();
             this.loadStatistics();
+
+            this.toastService.show({
+              type: 'success',
+              title: 'Client Updated',
+              message: 'Client details updated successfully!',
+              duration: 4000
+            });
           }
         });
     }
   }
 }
 
-  deleteClient(clientId: string): void {
-    if (confirm('Are you sure you want to delete this client?') && this.agentId) {
-      this.loading = true;
-      
-      this.clientsService.delete(this.agentId, clientId)
-        .pipe(
-          takeUntil(this.destroy$),
-          catchError((error) => {
-            console.error('Error deleting client:', error);
-            this.error = 'Failed to delete client. Please try again.';
-            return of({ success: false });
-          }),
-          finalize(() => this.loading = false)
-        )
-        .subscribe((response) => {
-          if (response.success) {
-            this.loadClients(); // Refresh the list
-            this.loadStatistics(); // Refresh statistics
-          }
-        });
-    }
+ prefillAppointment(client: ClientDisplay) {
+    this.appointmentForm.patchValue({
+      clientId: client.id,
+      notes: client.notes ?? ''
+    });
   }
+
+deleteClient(clientId: string): void {
+  if (!this.agentId) return;
+
+  this.toastService.confirm('Are you sure you want to delete this client?', ['Yes', 'No'])
+    .subscribe(action => {
+      if (action === 'yes') {
+        this.loading = true;
+
+        this.clientsService.delete(this.agentId!, clientId)
+          .pipe(
+            takeUntil(this.destroy$),
+            catchError((error) => {
+              console.error('Error deleting client:', error);
+              this.toastService.show({
+                type: 'error',
+                title: 'Delete Failed',
+                message: 'Failed to delete client. Please try again.',
+                duration: 4000   // ✅ auto-close after 4s
+              });
+              return of({ success: false });
+            }),
+            finalize(() => this.loading = false)
+          )
+          .subscribe((response) => {
+            if (response.success) {
+              this.loadClients();
+              this.loadStatistics();
+
+              this.toastService.show({
+                type: 'success',
+                title: 'Client Deleted',
+                message: 'Client deleted successfully.',
+                duration: 3000   // ✅ auto-close after 3s
+              });
+            }
+          });
+      }
+    });
+}
+
+
 
   convertToClient(client: ClientDisplay): void {
     if (!this.agentId) return;
-    
+
     this.loading = true;
-    
+
     this.clientsService.convert(this.agentId, client.id)
       .pipe(
         takeUntil(this.destroy$),
         catchError((error) => {
           console.error('Error converting to client:', error);
-          this.error = 'Failed to convert prospect to client. Please try again.';
+
+          // 🚨 Error Toast
+          this.toastService.show({
+            type: 'error',
+            title: 'Conversion Failed',
+            message: 'Failed to convert prospect to client. Please try again.',
+            duration: 5000, // auto-close after 5s
+            center: true
+          });
+
           return of({ success: false });
         }),
         finalize(() => this.loading = false)
       )
       .subscribe((response) => {
         if (response.success) {
-          this.loadClients(); // Refresh the list
-          this.loadStatistics(); // Refresh statistics
+          // ✅ Success Toast
+          this.toastService.show({
+            type: 'success',
+            title: 'Conversion Successful',
+            message: `${client.firstName} has been converted to a client.Visit Policy Page to set Up policy`,
+            duration: 4000,
+            center: true
+          });
+
+          this.loadClients();     // Refresh the list
+          this.loadStatistics();  // Refresh statistics
         }
       });
   }
@@ -557,4 +642,17 @@ onSubmit(): void {
   trackByClientId(index: number, client: ClientDisplay): string {
     return client.id;
   }
+bookAppointment(client: ClientDisplay) {
+  this.router.navigate(['/appointments/book'], {
+    state: {
+      clientId: client.id,
+      clientName: `${client.firstName} ${client.lastName}`,
+      clientPhone: client.phoneNumber,
+      clientEmail: client.email,
+      clientNotes: client.notes ?? ''
+    }
+  });
+}
+
+
 }

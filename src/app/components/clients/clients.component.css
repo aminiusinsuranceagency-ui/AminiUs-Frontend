@@ -1,6 +1,6 @@
 /* Aminus Theme Colors */
 :root {
-  --primary-red: #E53E3E;
+  --primary-red: #dc2626;
   --secondary-red: #C53030;
   --light-red: #FED7D7;
   --dark-gray: #2D3748;
@@ -18,7 +18,10 @@
   padding: 2rem;
   background-color: var(--background);
   min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+   overflow-x: hidden;
+     max-width: 100%;
+
 
 }
 
@@ -1015,4 +1018,46 @@
 .policy-status.lapsed {
   background: #fed7aa;
   color: #ea580c;
+}
+/* Adjust Clients Container for mobile */
+@media (max-width: 480px) {
+  .clients-container {
+    padding: 0.5rem;
+  }
+
+  .page-title {
+    font-size: 1.4rem; /* scale down */
+  }
+
+  .page-subtitle {
+    font-size: 0.9rem;
+  }
+}
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1rem;  /* smaller padding */
+  }
+
+  .page-title {
+    font-size: 1.5rem; /* reduce heading size */
+  }
+
+  .stat-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr; /* force single column */
+  }
+
+  .header-content {
+    flex-direction: column; /* already there */
+    align-items: flex-start;
+  }
+
+  .header-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem; /* buttons stack/wrap nicely */
+  }
 }

@@ -39,10 +39,12 @@ export interface CreateAppointmentRequest {
   endTime: string;
   location?: string;
   type: 'Call' | 'Meeting' | 'Site Visit' | 'Policy Review' | 'Claim Processing';
+  status: 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'Rescheduled';  // ✅ add status
   priority?: 'High' | 'Medium' | 'Low';
   notes?: string;
   reminderSet?: boolean;
 }
+
 
 export interface UpdateAppointmentRequest {
    clientId?: string;
@@ -53,6 +55,7 @@ export interface UpdateAppointmentRequest {
   endTime?: string;
   location?: string;
   type?: 'Call' | 'Meeting' | 'Site Visit' | 'Policy Review' | 'Claim Processing';
+    status?: 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'Rescheduled';  
   priority?: 'High' | 'Medium' | 'Low';
   notes?: string;
   reminderSet?: boolean;
@@ -434,38 +437,46 @@ searchClients(agentId: string, query: string) {
 
   /** Build a CreateAppointmentRequest from form-like data */
   createAppointmentPayload(formData: any): CreateAppointmentRequest {
-    return {
-      clientId: formData.clientId,
-      title: formData.title,
-      description: formData.description,
-      appointmentDate: this.formatDateForApi(new Date(formData.appointmentDate)),
-      startTime: this.formatTimeForApi(formData.startTime),
-      endTime: this.formatTimeForApi(formData.endTime),
-      location: formData.location,
-      type: formData.type,
-      priority: formData.priority || 'Medium',
-      notes: formData.notes,
-      reminderSet: !!formData.reminderSet
-    };
-  }
+  return {
+    clientId: formData.clientId,
+    title: formData.title,
+    description: formData.description,
+    appointmentDate: this.formatDateForApi(new Date(formData.appointmentDate)),
+    startTime: this.formatTimeForApi(formData.startTime),
+    endTime: this.formatTimeForApi(formData.endTime),
+    location: formData.location,
+    type: formData.type,
+    status: formData.status || 'Scheduled',   // ✅ include status, default if missing
+    priority: formData.priority || 'Medium',
+    notes: formData.notes,
+    reminderSet: !!formData.reminderSet
+  };
+}
+
   
 
 
   /** Build an UpdateAppointmentRequest from form-like data */
-  createUpdateAppointmentPayload(formData: any): UpdateAppointmentRequest {
-    const payload: UpdateAppointmentRequest = {};
-    if (formData.title) payload.title = formData.title;
-    if (formData.description) payload.description = formData.description;
-    if (formData.appointmentDate) payload.appointmentDate = this.formatDateForApi(new Date(formData.appointmentDate));
-    if (formData.startTime) payload.startTime = this.formatTimeForApi(formData.startTime);
-    if (formData.endTime) payload.endTime = this.formatTimeForApi(formData.endTime);
-    if (formData.location) payload.location = formData.location;
-    if (formData.type) payload.type = formData.type;
-    if (formData.priority) payload.priority = formData.priority;
-    if (formData.notes) payload.notes = formData.notes;
-    if (formData.reminderSet !== undefined) payload.reminderSet = !!formData.reminderSet;
-    return payload;
+createUpdateAppointmentPayload(formData: any): UpdateAppointmentRequest {
+  const payload: UpdateAppointmentRequest = {};
+
+  if (formData.title) payload.title = formData.title;
+  if (formData.description) payload.description = formData.description;
+  if (formData.appointmentDate) {
+    payload.appointmentDate = this.formatDateForApi(new Date(formData.appointmentDate));
   }
+  if (formData.startTime) payload.startTime = this.formatTimeForApi(formData.startTime);
+  if (formData.endTime) payload.endTime = this.formatTimeForApi(formData.endTime);
+  if (formData.location) payload.location = formData.location;
+  if (formData.type) payload.type = formData.type;
+  if (formData.status) payload.status = formData.status;   // ✅ include status
+  if (formData.priority) payload.priority = formData.priority;
+  if (formData.notes) payload.notes = formData.notes;
+  if (formData.reminderSet !== undefined) payload.reminderSet = !!formData.reminderSet;
+
+  return payload;
+}
+
 
   formatAppointmentTime(appointment: Appointment): string {
   if (!appointment.appointmentDate || !appointment.startTime || !appointment.endTime) {

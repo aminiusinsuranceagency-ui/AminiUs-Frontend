@@ -28,7 +28,7 @@ export interface NavbarBadgeCounts {
   providedIn: 'root'
 })
 export class AgentService {
-  private baseUrl = 'http://localhost:3000/api'; // move to environment.ts in real app
+  private baseUrl = 'http://localhost:3000/api'; 
 
   constructor(private http: HttpClient) {
     console.log('AgentService initialized with baseUrl:', this.baseUrl);
@@ -155,7 +155,9 @@ export class AgentService {
         catchError(this.handleError)
       );
   }
-
+getNavbarBadgeCounts(agentId: string): Observable<NavbarBadgeCounts> {
+  return this.http.get<NavbarBadgeCounts>(`${this.baseUrl}/agent/${agentId}/navbar-counts`);
+  }
   getPolicyTypes(): Observable<PolicyType[]> {
     console.log('AgentService: Getting policy types');
     return this.http.get<PolicyType[]>(`${this.baseUrl}/policy-types`)
@@ -230,7 +232,5 @@ export class AgentService {
     console.log('Service initialized:', !!this.http);
     console.log('===============================');
   }
-   getNavbarBadgeCounts(agentId: string): Observable<NavbarBadgeCounts> {
-    return this.http.get<NavbarBadgeCounts>(`${this.baseUrl}/${agentId}/navbar-counts`);
-  }
+   
 }

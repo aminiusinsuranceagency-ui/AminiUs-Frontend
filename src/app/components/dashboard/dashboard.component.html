@@ -1,210 +1,328 @@
-<!-- Dashboard Container -->
 <div class="dashboard-container">
-  <!-- Import navbar -->
-  <app-navbar></app-navbar>
+  <!-- Navbar -->
+  <!-- <app-navbar></app-navbar> -->
+
+  <!-- Loading Overlay -->
+  <div *ngIf="loading" class="loading-overlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+      <p class="mt-3 text-gray-600">Loading your dashboard...</p>
+    </div>
+  </div>
 
   <!-- Main Dashboard Content -->
-  <div class="dashboard-content">
-    
+  <div *ngIf="!loading" class="dashboard-content">
     <!-- Header Section -->
     <div class="dashboard-header">
-      <div class="greeting-section">
-        <h1 class="greeting">{{ greeting }}</h1>
-        <p class="current-date">{{ currentTime | date:'EEEE, MMMM d, yyyy' }}</p>
-        <p class="current-time">{{ currentTime | date:'h:mm a' }}</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-refresh" (click)="refreshDashboard()" [disabled]="loading">
-          <i class="fas fa-sync-alt" [class.spinning]="loading"></i>
-        </button>
+      <div class="header-content">
+        <div class="welcome-section">
+          <h1 class="welcome-title">
+            {{ greeting }}, {{ dashboardData.agent?.FirstName || 'Agent' }}!
+          </h1>
+          <p class="welcome-subtitle">
+            Welcome to your insurance management dashboard
+          </p>
+          <div class="current-time">
+            <i class="fas fa-clock text-gray-500"></i>
+            <span>{{ currentTime | date:'fullDate' }} • {{ currentTime | date:'shortTime' }}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button (click)="refreshDashboard()" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+            Refresh
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Quick Stats Grid -->
-    <div class="stats-grid" *ngIf="!statsLoading">
-      <div class="stat-card" *ngFor="let stat of quickStats" [style.border-left-color]="stat.color">
-        <div class="stat-icon" [style.color]="stat.color">
-          <i [class]="stat.icon"></i>
-        </div>
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div *ngFor="let card of statCards" 
+           class="stat-card" 
+           [class]="card.color"
+           (click)="onStatCardClick(card)">
         <div class="stat-content">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
-          <div class="stat-trend" *ngIf="stat.trend">{{ stat.trend }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stats Loading State -->
-    <div class="stats-loading" *ngIf="statsLoading">
-      <div class="skeleton-stat" *ngFor="let i of [1,2,3,4,5,6]"></div>
-    </div>
-
-    <!-- Today's Activities Section -->
-    <div class="activities-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          <i class="fas fa-calendar-day"></i>
-          Today's Activities
-        </h2>
-        <span class="activity-count">{{ todayActivities.length }}</span>
-      </div>
-
-      <!-- Activities Loading State -->
-      <div class="activities-loading" *ngIf="activitiesLoading">
-        <div class="skeleton-activity" *ngFor="let i of [1,2,3]"></div>
-      </div>
-
-      <!-- Activities List -->
-      <div class="activities-list" *ngIf="!activitiesLoading">
-        <div class="activity-card" 
-             *ngFor="let activity of todayActivities" 
-             (click)="selectActivity(activity)"
-             [class.selected]="selectedActivity?.id === activity.id">
-          
-          <div class="activity-indicator" [style.background-color]="activity.color"></div>
-          
-          <div class="activity-icon" [style.color]="activity.color">
-            <i [class]="activity.icon"></i>
+          <div class="stat-icon">
+            <i [class]="card.icon"></i>
           </div>
-          
-          <div class="activity-content">
-            <div class="activity-header">
-              <h3 class="activity-title">{{ activity.title }}</h3>
-              <span class="activity-time" *ngIf="activity.time">
-                {{ formatTime(activity.time) }}
-              </span>
-            </div>
-            <p class="activity-subtitle">{{ activity.subtitle }}</p>
-            <div class="activity-meta">
-              <span class="activity-status" [style.color]="activity.color">
-                {{ activity.status | titlecase }}
-              </span>
-              <span class="activity-countdown" *ngIf="activity.time">
-                {{ getTimeUntil(activity.time) }}
-              </span>
-              <span class="activity-priority" 
-                    *ngIf="activity.priority"
-                    [class]="'priority-' + activity.priority.toLowerCase()">
-                {{ activity.priority }} Priority
-              </span>
+          <div class="stat-details">
+            <h3 class="stat-value">{{ card.value }}</h3>
+            <p class="stat-title">{{ card.title }}</p>
+            <div *ngIf="card.trend" class="stat-trend">
+              <i class="fas fa-arrow-up" [class.fa-arrow-down]="!card.trend.isPositive"></i>
+              <span>+{{ card.trend.value }} this week</span>
             </div>
           </div>
-          
-          <div class="activity-actions">
-            <button class="btn-action" title="View Details">
-              <i class="fas fa-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div class="empty-activities" *ngIf="todayActivities.length === 0">
-          <i class="fas fa-calendar-check empty-icon"></i>
-          <h3>No activities scheduled for today</h3>
-          <p>Take a moment to plan your day or check upcoming activities.</p>
         </div>
       </div>
     </div>
+<!-- Quick Actions Section -->
+<div class="quick-actions-section">
+  <h2 class="section-title">
+    <i class="fas fa-bolt text-primary"></i>
+    Quick Actions
+  </h2>
 
-    <!-- Daily Notes Section -->
-    <div class="notes-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          <i class="fas fa-sticky-note"></i>
-          Today's Notes
-        </h2>
-        <button class="btn-edit-notes" (click)="toggleNotesEditor()" [disabled]="notesLoading">
-          <i class="fas fa-edit"></i>
-          {{ showNotesEditor ? 'Cancel' : 'Edit' }}
-        </button>
+  <div class="quick-actions-grid">
+    <div *ngFor="let action of dashboardData.quickActions" 
+         class="quick-action-card"
+         (click)="onQuickAction(action)">
+
+      <!-- Keep static + add dynamic -->
+      <div class="action-icon" [ngClass]="action.color">
+        <i [ngClass]="action.icon"></i>
       </div>
 
-      <!-- Notes Loading State -->
-      <div class="notes-loading" *ngIf="notesLoading">
-        <div class="skeleton-notes"></div>
+      <div class="action-content">
+        <h3>{{ action.title }}</h3>
+        <p>{{ action.description }}</p>
       </div>
 
-      <!-- Notes Display -->
-      <div class="notes-content" *ngIf="!notesLoading && !showNotesEditor">
-        <div class="notes-display" *ngIf="todaysNotes.length > 0 && todaysNotes[0]?.Notes; else noNotes">
-  <p [innerHTML]="todaysNotes[0].Notes | nl2br"></p>
-</div>
-        <ng-template #noNotes>
-          <div class="empty-notes">
-            <i class="fas fa-pen"></i>
-            <p>No notes for today. Click edit to add some!</p>
-          </div>
-        </ng-template>
-      </div>
-
-      <!-- Notes Editor -->
-      <div class="notes-editor" *ngIf="showNotesEditor">
-        <textarea 
-          class="notes-textarea"
-          [(ngModel)]="newNotesContent"
-          placeholder="Add your notes for today..."
-          rows="6">
-        </textarea>
-        <div class="notes-actions">
-          <button class="btn-save" (click)="saveNotes()">
-            <i class="fas fa-save"></i>
-            Save Notes
-          </button>
-          <button class="btn-cancel" (click)="toggleNotesEditor()">
-            <i class="fas fa-times"></i>
-            Cancel
-          </button>
-        </div>
+      <div class="action-arrow">
+        <i class="fas fa-chevron-right"></i>
       </div>
     </div>
-
-    <!-- Quick Actions Section -->
-    <div class="quick-actions-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          <i class="fas fa-bolt"></i>
-          Quick Actions
-        </h2>
-      </div>
-      
-      <div class="quick-actions-grid">
-        <button class="action-card" routerLink="/clients/create">
-          <div class="action-icon">
-            <i class="fas fa-user-plus"></i>
-          </div>
-          <span class="action-label">Add Client</span>
-        </button>
-        
-        <button class="action-card" routerLink="/appointments/create">
-          <div class="action-icon">
-            <i class="fas fa-calendar-plus"></i>
-          </div>
-          <span class="action-label">New Appointment</span>
-        </button>
-        
-        <button class="action-card" routerLink="/reminders/create">
-          <div class="action-icon">
-            <i class="fas fa-bell-plus"></i>
-          </div>
-          <span class="action-label">Set Reminder</span>
-        </button>
-        
-        <button class="action-card" routerLink="/policies">
-          <div class="action-icon">
-            <i class="fas fa-shield-alt"></i>
-          </div>
-          <span class="action-label">View Policies</span>
-        </button>
-      </div>
-    </div>
-
   </div>
 </div>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" *ngIf="loading">
-  <div class="loading-spinner">
-    <div class="spinner"></div>
-    <p>Loading dashboard...</p>
+
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+      <!-- Left Column -->
+      <div class="left-column">
+        <!-- Today's Appointments -->
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-calendar-day text-primary"></i>
+              Today's Appointments
+            </h3>
+            <span class="badge bg-primary">{{ dashboardData.todayAppointments.length }}</span>
+          </div>
+          <div class="card-content">
+            <div *ngIf="dashboardData.todayAppointments.length === 0" class="empty-state">
+              <i class="fas fa-calendar-times text-gray-400 text-4xl mb-3"></i>
+              <p class="text-gray-500">No appointments scheduled for today</p>
+              <button (click)="onQuickAction(dashboardData.quickActions[1])" class="btn-primary-sm">
+                Schedule Appointment
+              </button>
+            </div>
+            <div *ngFor="let appointment of dashboardData.todayAppointments" 
+                 class="appointment-item"
+                 (click)="onAppointmentClick(appointment)">
+              <div class="appointment-time">
+                <span class="time">{{ formatTime(appointment.startTime) }}</span>
+                <span class="duration" *ngIf="appointment.endTime">
+                  - {{ formatTime(appointment.endTime) }}
+                </span>
+              </div>
+              <div class="appointment-details">
+                <h4>{{ appointment.title }}</h4>
+                <p class="client-info">
+                  <i class="fas fa-user"></i>
+                  {{ appointment.clientName }}
+                </p>
+                <p class="appointment-type" *ngIf="appointment.type">
+                  <i class="fas fa-tag"></i>
+                  {{ appointment.type }}
+                </p>
+                <p class="appointment-location" *ngIf="appointment.location">
+                  <i class="fas fa-map-marker-alt"></i>
+                  {{ appointment.location }}
+                </p>
+              </div>
+              <div class="appointment-status">
+                <span class="status-badge" [class]="getAppointmentStatusColor(appointment.status)">
+                  {{ appointment.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Clients -->
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-users text-primary"></i>
+              Recent Clients
+            </h3>
+            <a routerLink="/clients" class="view-all-link">View All</a>
+          </div>
+          <div class="card-content">
+            <div *ngIf="dashboardData.recentClients.length === 0" class="empty-state">
+              <i class="fas fa-user-plus text-gray-400 text-4xl mb-3"></i>
+              <p class="text-gray-500">No clients added yet</p>
+              <button (click)="onQuickAction(dashboardData.quickActions[0])" class="btn-primary-sm">
+                Add Client
+              </button>
+            </div>
+            <div *ngFor="let client of dashboardData.recentClients" 
+                 class="client-item"
+                 (click)="onClientClick(client)">
+              <div class="client-avatar">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="client-details">
+                <h4>{{ client.FirstName }} {{ client.LastName }}</h4>
+                <p class="client-type">
+                  <span class="type-badge" [class]="client.IsClient ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'">
+                    {{ client.IsClient ? 'Client' : 'Prospect' }}
+                  </span>
+                </p>
+                <p class="client-contact">
+                  <i class="fas fa-phone"></i>
+                  {{ client.PhoneNumber }}
+                </p>
+                <p class="client-insurance" *ngIf="client.InsuranceType">
+                  <i class="fas fa-shield-alt"></i>
+                  {{ client.InsuranceType }}
+                </p>
+              </div>
+              <div class="client-meta">
+                <span class="created-date">{{ formatDate(client.CreatedDate) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="right-column">
+        <!-- Expiring Policies -->
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-exclamation-triangle text-warning"></i>
+              Policies Expiring Soon
+            </h3>
+            <span class="badge bg-warning">{{ dashboardData.expiringPolicies.length }}</span>
+          </div>
+          <div class="card-content">
+            <div *ngIf="dashboardData.expiringPolicies.length === 0" class="empty-state">
+              <i class="fas fa-check-circle text-green-400 text-4xl mb-3"></i>
+              <p class="text-gray-500">No policies expiring soon</p>
+            </div>
+            <div *ngFor="let policy of dashboardData.expiringPolicies" 
+                 class="policy-item"
+                 (click)="onPolicyClick(policy)">
+              <div class="policy-icon">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <div class="policy-details">
+                <h4>{{ policy.policyName }}</h4>
+                <p class="policy-client">
+                  <i class="fas fa-user"></i>
+                  Client ID: {{ policy.clientId }}
+                </p>
+                <p class="policy-company" *ngIf="policy.companyName">
+                  <i class="fas fa-building"></i>
+                  {{ policy.companyName }}
+                </p>
+                <p class="policy-expiry">
+                  <i class="fas fa-calendar-alt"></i>
+                  Matures: {{ formatDate(policy.endDate) }}
+                </p>
+              </div>
+              <div class="policy-urgency">
+                <div class="urgency-indicator" 
+                     [class]="getDaysUntilExpiry(policy) <= 7 ? 'urgent' : 
+                              getDaysUntilExpiry(policy) <= 15 ? 'warning' : 'normal'">
+                  <span class="days-left">{{ getDaysUntilExpiry(policy) }}</span>
+                  <span class="days-label">days</span>
+                </div>
+                <span class="status-badge" [class]="getPolicyStatusColor(policy)">
+                  {{ policy.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Birthdays -->
+        <div class="dashboard-card" *ngIf="dashboardData.todayBirthdays.length > 0">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-birthday-cake text-pink-500"></i>
+              Today's Birthdays
+            </h3>
+            <span class="badge bg-pink-500">{{ dashboardData.todayBirthdays.length }}</span>
+          </div>
+          <div class="card-content">
+            <div *ngFor="let birthday of dashboardData.todayBirthdays" 
+                 class="birthday-item"
+                 (click)="onClientClick(birthday)">
+              <div class="birthday-icon">
+                <i class="fas fa-gift"></i>
+              </div>
+              <div class="birthday-details">
+                <h4>{{ birthday.FirstName }} {{ birthday.LastName }}</h4>
+                <p class="birthday-age">
+                  <i class="fas fa-birthday-cake"></i>
+                  Turning {{ birthday.Age }} today!
+                </p>
+                <p class="birthday-contact">
+                  <i class="fas fa-phone"></i>
+                  {{ birthday.PhoneNumber }}
+                </p>
+              </div>
+              <div class="birthday-action">
+                <button class="btn-birthday">
+                  <i class="fas fa-paper-plane"></i>
+                  Send Wishes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Notes -->
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-sticky-note text-primary"></i>
+              Today's Notes
+            </h3>
+            <button (click)="onEditNotes()" class="edit-notes-btn" *ngIf="!showNotesEditor">
+              <i class="fas fa-edit"></i>
+              Edit
+            </button>
+          </div>
+          <div class="card-content">
+            <div *ngIf="!showNotesEditor" class="notes-display">
+              <div *ngIf="!todayNotesText" class="empty-notes">
+                <i class="fas fa-sticky-note text-gray-400 text-4xl mb-3"></i>
+                <p class="text-gray-500">No notes for today</p>
+                <button (click)="onEditNotes()" class="btn-primary-sm">
+                  Add Notes
+                </button>
+              </div>
+              <div *ngIf="todayNotesText" class="notes-content" [innerHTML]="todayNotesText | nl2br"></div>
+            </div>
+            
+            <div *ngIf="showNotesEditor" class="notes-editor">
+              <textarea 
+                [(ngModel)]="todayNotesText" 
+                class="notes-textarea"
+                placeholder="Add your notes for today..."
+                rows="6">
+              </textarea>
+              <div class="notes-actions">
+                <button (click)="onSaveNotes()" class="btn-primary-sm">
+                  <i class="fas fa-save"></i>
+                  Save
+                </button>
+                <button (click)="onCancelNotes()" class="btn-secondary-sm">
+                  <i class="fas fa-times"></i>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

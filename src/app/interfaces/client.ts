@@ -28,7 +28,7 @@ export interface ClientPolicy {
   CompanyName: string;
   Status: 'Active' | 'Inactive' | 'Expired' | 'Lapsed';
   StartDate: string;
-  EndDate: string;
+  EndDate: string | Date;
   DaysToExpiry?: number;
   Notes?: string;
   CreatedDate: string;

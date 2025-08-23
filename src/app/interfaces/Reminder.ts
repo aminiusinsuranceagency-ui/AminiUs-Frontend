@@ -4,11 +4,19 @@ export interface Reminder {
     ClientId?: string;
     AppointmentId?: string;
     AgentId: string;
-    ReminderType: 'Call' | 'Visit' | 'Policy Expiry' | 'Birthday' | 'Holiday' | 'Custom';
+    ReminderType: 
+        'Call' 
+        | 'Visit' 
+        | 'Policy Expiry' 
+        | 'Maturing Policy' 
+        | 'Birthday' 
+        | 'Holiday' 
+        | 'Custom' 
+        | 'Appointment';   
     Title: string;
     Description?: string;
     ReminderDate: string; // ISO string for frontend
-    ReminderTime?: string; // SQL TIME format
+    ReminderTime?: string; 
     ClientName?: string;
     Priority: 'High' | 'Medium' | 'Low';
     Status: 'Active' | 'Completed' | 'Cancelled';
@@ -26,6 +34,7 @@ export interface Reminder {
     ClientEmail?: string;
     FullClientName?: string;
 }
+
 
 // Reminder settings
 export interface ReminderSettings {
@@ -130,4 +139,13 @@ export interface PhoneValidationResult {
     IsValid: boolean;
     FormattedNumber: string;
     ValidationMessage: string;
+}
+
+export interface ReminderStatistics {
+  TotalActive: number;
+  TotalCompleted: number;
+  TodayReminders: number;
+  UpcomingReminders: number;
+  HighPriority: number;
+  Overdue: number;
 }

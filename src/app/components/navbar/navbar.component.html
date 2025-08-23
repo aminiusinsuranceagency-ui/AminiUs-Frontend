@@ -1,14 +1,15 @@
-<nav class="navbar-container">
-   
+<nav class="navbar-container" [class.auto-hide]="isNavbarHidden" [class.show]="!isNavbarHidden">
   <div class="navbar-content">
-    <!-- Logo Section -->
+    <!-- Logo Section with Favicon -->
     <div class="navbar-brand">
-      <div class="brand-logo">
+      <div class="brand-logo" (click)="navigateTo('/dashboard')">
         <div class="logo-icon">
-          <div class="logo-circle">
-            <div class="logo-dot"></div>
-          </div>
-        </div>
+          <!-- Replace with your favicon image from assets folder -->
+          <img 
+            src="assets/favicon.ico" 
+            alt="Aminus Logo" 
+            class="logo-favicon"
+(error)="setDefaultImage($event)">        </div>
         <div class="brand-text">
           <h1 class="brand-name">AMINUS</h1>
           <p class="brand-tagline">Trust, Care, Growth</p>
@@ -20,14 +21,18 @@
     <div class="navbar-nav desktop-nav">
       <div class="nav-items">
         <a 
-          *ngFor="let item of navigationItems" 
+          *ngFor="let item of navigationItems; trackBy: trackByFn" 
           [class]="'nav-item ' + (item.isActive ? 'active' : '')"
           (click)="navigateTo(item.route)"
-          [title]="item.label">
-          <i [class]="item.icon"></i>
+          [title]="item.label"
+          [attr.aria-label]="item.label + (item.badge && item.badge > 0 ? ' (' + item.badge + ' items)' : '')">
+          <i [class]="item.icon" aria-hidden="true"></i>
           <span class="nav-label">{{ item.label }}</span>
-          <span *ngIf="item.badge && item.badge > 0" class="nav-badge">
-            {{ item.badge > 99 ? '99+' : item.badge }}
+          <span 
+            *ngIf="item.badge && item.badge > 0" 
+            class="nav-badge"
+            [attr.aria-label]="item.badge + ' items'">
+            {{ formatBadgeCount(item.badge) }}
           </span>
         </a>
       </div>
@@ -35,78 +40,104 @@
 
     <!-- Quick Actions & Profile Section -->
     <div class="navbar-actions">
-      <!-- Quick Actions Dropdown -->
-      <div class="quick-actions-dropdown">
-        <button class="quick-actions-btn" title="Quick Actions">
-          <i class="fas fa-plus"></i>
-          <span class="desktop-only">Quick Actions</span>
-        </button>
-        <div class="quick-actions-menu">
-          <div class="quick-actions-header">
-            <h4>Quick Actions</h4>
-          </div>
-          <div class="quick-actions-list">
-            <button 
-              *ngFor="let action of quickActions"
-              class="quick-action-item"
-              (click)="executeQuickAction(action.action)">
-              <div class="action-icon" [ngClass]="action.color">
-                <i [class]="action.icon"></i>
-              </div>
-              <span>{{ action.label }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- Auto-hide Toggle Button (Desktop Only) -->
+      <button 
+        class="autohide-toggle desktop-only"
+        (click)="toggleAutoHide()"
+        [class.enabled]="isAutoHideEnabled"
+        [title]="isAutoHideEnabled ? 'Disable Auto-hide' : 'Enable Auto-hide'"
+        [attr.aria-label]="isAutoHideEnabled ? 'Disable Auto-hide' : 'Enable Auto-hide'">
+        <i 
+          [class]="isAutoHideEnabled ? 'fas fa-eye' : 'fas fa-eye-slash'" 
+          aria-hidden="true"></i>
+      </button>
 
-      <!-- Notifications -->
-      <div class="notification-btn" title="Notifications">
-        <button class="btn-icon">
-          <i class="fas fa-bell"></i>
-          <span class="notification-badge" *ngIf="getTotalBadgeCount() > 0">
-            {{ getTotalBadgeCount() > 99 ? '99+' : getTotalBadgeCount() }}
-          </span>
-        </button>
-      </div>
+
 
       <!-- Profile Dropdown -->
       <div class="profile-dropdown-container">
-        <button class="profile-btn" (click)="toggleProfileDropdown()">
+        <button 
+          class="profile-btn" 
+          (click)="toggleProfileDropdown()"
+          [attr.aria-expanded]="isProfileDropdownOpen"
+          aria-label="User menu">
           <div class="profile-avatar">
-            <span>{{ getUserInitials() }}</span>
+            <img 
+              *ngIf="currentUser.avatar"
+              [src]="currentUser.avatar"
+              [alt]="getDisplayName() + ' profile picture'"
+              (error)="onAvatarError()"
+              style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+            <span *ngIf="!currentUser.avatar">{{ getUserInitials() }}</span>
           </div>
           <div class="profile-info desktop-only">
-            <span class="profile-name">{{ currentUser.name }}</span>
+            <span class="profile-name">{{ getDisplayName() }}</span>
             <span class="profile-role">{{ currentUser.role }}</span>
           </div>
-          <i class="fas fa-chevron-down profile-arrow" 
-             [class.rotated]="isProfileDropdownOpen"></i>
+          <i 
+            class="fas fa-chevron-down profile-arrow" 
+            [class.rotated]="isProfileDropdownOpen"
+            aria-hidden="true"></i>
         </button>
 
-        <div class="profile-dropdown" [class.open]="isProfileDropdownOpen">
+        <div 
+          class="profile-dropdown" 
+          [class.open]="isProfileDropdownOpen"
+          role="menu">
           <div class="profile-header">
             <div class="profile-avatar large">
-              <span>{{ getUserInitials() }}</span>
+              <img 
+                *ngIf="currentUser.avatar"
+                [src]="currentUser.avatar"
+                [alt]="getDisplayName() + ' profile picture'"
+                (error)="onAvatarError()"
+                style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+              <span *ngIf="!currentUser.avatar">{{ getUserInitials() }}</span>
             </div>
             <div class="profile-details">
-              <h4>{{ currentUser.name }}</h4>
+              <h4>{{ getDisplayName() }}</h4>
               <p>{{ currentUser.email }}</p>
               <span class="role-badge">{{ currentUser.role }}</span>
             </div>
           </div>
           
           <div class="profile-menu">
-            <button class="profile-menu-item" (click)="goToProfile()">
-              <i class="fas fa-user"></i>
+            <button 
+              class="profile-menu-item" 
+              role="menuitem"
+              (click)="goToProfile()"
+              (keydown.enter)="goToProfile()"
+              (keydown.space)="goToProfile()">
+              <i class="fas fa-user" aria-hidden="true"></i>
               <span>My Profile</span>
             </button>
-            <button class="profile-menu-item" (click)="goToSettings()">
-              <i class="fas fa-cog"></i>
+            <button 
+              class="profile-menu-item" 
+              role="menuitem"
+              (click)="goToSettings()"
+              (keydown.enter)="goToSettings()"
+              (keydown.space)="goToSettings()">
+              <i class="fas fa-cog" aria-hidden="true"></i>
               <span>Settings</span>
             </button>
+            <button 
+              class="profile-menu-item" 
+              role="menuitem"
+              (click)="refreshBadges()"
+              (keydown.enter)="refreshBadges()"
+              (keydown.space)="refreshBadges()"
+              [disabled]="isLoading">
+              <i class="fas fa-sync-alt" [class.fa-spin]="isLoading" aria-hidden="true"></i>
+              <span>{{ isLoading ? 'Refreshing...' : 'Refresh Data' }}</span>
+            </button>
             <div class="menu-divider"></div>
-            <button class="profile-menu-item logout" (click)="logout()">
-              <i class="fas fa-sign-out-alt"></i>
+            <button 
+              class="profile-menu-item logout" 
+              role="menuitem"
+              (click)="logout()"
+              (keydown.enter)="logout()"
+              (keydown.space)="logout()">
+              <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
               <span>Logout</span>
             </button>
           </div>
@@ -114,21 +145,39 @@
       </div>
 
       <!-- Mobile Menu Toggle -->
-      <button class="mobile-menu-toggle mobile-only" (click)="toggleMobileMenu()">
-        <i class="fas" [class.fa-bars]="!isMenuOpen" [class.fa-times]="isMenuOpen"></i>
+      <button 
+        class="mobile-menu-toggle mobile-only" 
+        (click)="toggleMobileMenu()"
+        [attr.aria-expanded]="isMenuOpen"
+        aria-label="Toggle mobile menu">
+        <i 
+          class="fas" 
+          [class.fa-bars]="!isMenuOpen" 
+          [class.fa-times]="isMenuOpen"
+          aria-hidden="true"></i>
       </button>
     </div>
   </div>
 
   <!-- Mobile Navigation Menu -->
-  <div class="mobile-nav" [class.open]="isMenuOpen">
+  <div 
+    class="mobile-nav" 
+    [class.open]="isMenuOpen"
+    role="navigation"
+    [attr.aria-hidden]="!isMenuOpen">
     <div class="mobile-nav-header">
       <div class="user-info">
         <div class="profile-avatar">
-          <span>{{ getUserInitials() }}</span>
+          <img 
+            *ngIf="currentUser.avatar"
+            [src]="currentUser.avatar"
+            [alt]="getDisplayName() + ' profile picture'"
+            (error)="onAvatarError()"
+            style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+          <span *ngIf="!currentUser.avatar">{{ getUserInitials() }}</span>
         </div>
         <div class="user-details">
-          <h4>{{ currentUser.name }}</h4>
+          <h4>{{ getDisplayName() }}</h4>
           <p>{{ currentUser.role }}</p>
         </div>
       </div>
@@ -136,15 +185,19 @@
 
     <div class="mobile-nav-items">
       <a 
-        *ngFor="let item of navigationItems" 
+        *ngFor="let item of navigationItems; trackBy: trackByFn" 
         [class]="'mobile-nav-item ' + (item.isActive ? 'active' : '')"
-        (click)="navigateTo(item.route)">
+        (click)="navigateTo(item.route)"
+        [attr.aria-label]="item.label + (item.badge && item.badge > 0 ? ' (' + item.badge + ' items)' : '')">
         <div class="nav-item-content">
-          <i [class]="item.icon"></i>
+          <i [class]="item.icon" aria-hidden="true"></i>
           <span>{{ item.label }}</span>
         </div>
-        <span *ngIf="item.badge && item.badge > 0" class="nav-badge">
-          {{ item.badge > 99 ? '99+' : item.badge }}
+        <span 
+          *ngIf="item.badge && item.badge > 0" 
+          class="nav-badge"
+          [attr.aria-label]="item.badge + ' items'">
+          {{ formatBadgeCount(item.badge) }}
         </span>
       </a>
     </div>
@@ -153,11 +206,12 @@
       <h5>Quick Actions</h5>
       <div class="mobile-quick-actions-grid">
         <button 
-          *ngFor="let action of quickActions"
+          *ngFor="let action of quickActions; trackBy: trackByActionFn"
           class="mobile-quick-action"
+          [attr.aria-label]="action.label"
           (click)="executeQuickAction(action.action)">
           <div class="action-icon" [ngClass]="action.color">
-            <i [class]="action.icon"></i>
+            <i [class]="action.icon" aria-hidden="true"></i>
           </div>
           <span>{{ action.label }}</span>
         </button>
@@ -165,21 +219,36 @@
     </div>
 
     <div class="mobile-nav-footer">
-      <button class="mobile-nav-item" (click)="goToProfile()">
+      <button 
+        class="mobile-nav-item" 
+        (click)="goToProfile()">
         <div class="nav-item-content">
-          <i class="fas fa-user"></i>
+          <i class="fas fa-user" aria-hidden="true"></i>
           <span>My Profile</span>
         </div>
       </button>
-      <button class="mobile-nav-item" (click)="goToSettings()">
+      <button 
+        class="mobile-nav-item" 
+        (click)="goToSettings()">
         <div class="nav-item-content">
-          <i class="fas fa-cog"></i>
+          <i class="fas fa-cog" aria-hidden="true"></i>
           <span>Settings</span>
         </div>
       </button>
-      <button class="mobile-nav-item logout" (click)="logout()">
+      <button 
+        class="mobile-nav-item" 
+        (click)="refreshBadges()"
+        [disabled]="isLoading">
         <div class="nav-item-content">
-          <i class="fas fa-sign-out-alt"></i>
+          <i class="fas fa-sync-alt" [class.fa-spin]="isLoading" aria-hidden="true"></i>
+          <span>{{ isLoading ? 'Refreshing...' : 'Refresh Data' }}</span>
+        </div>
+      </button>
+      <button 
+        class="mobile-nav-item logout" 
+        (click)="logout()">
+        <div class="nav-item-content">
+          <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
           <span>Logout</span>
         </div>
       </button>
@@ -187,5 +256,9 @@
   </div>
 
   <!-- Mobile Menu Overlay -->
-  <div class="mobile-overlay" [class.visible]="isMenuOpen" (click)="isMenuOpen = false"></div>
+  <div 
+    class="mobile-overlay" 
+    [class.visible]="isMenuOpen" 
+    (click)="toggleMobileMenu()"
+    [attr.aria-hidden]="!isMenuOpen"></div>
 </nav>

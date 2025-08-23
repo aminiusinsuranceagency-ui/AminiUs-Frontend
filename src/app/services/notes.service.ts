@@ -12,7 +12,7 @@ import {
   providedIn: 'root'
 })
 export class NotesService {
-  private baseUrl = '/api/notes';
+  private baseUrl = 'http://localhost:3000/api/notes';
 
   constructor(private http: HttpClient) {}
 
@@ -30,13 +30,18 @@ export class NotesService {
   }
 
   /** Get all notes for an agent within an optional date range */
-  getAllNotes(agentId: string, range?: NotesDateRange): Observable<DailyNote[]> {
-    let params = new HttpParams();
-    if (range?.StartDate) params = params.set('StartDate', range.StartDate);
-    if (range?.EndDate) params = params.set('EndDate', range.EndDate);
+getAllNotes(agentId: string, range?: NotesDateRange): Observable<DailyNote[]> {
+  let params = new HttpParams(); 
 
-    return this.http.get<DailyNote[]>(`${this.baseUrl}/all/${agentId}`, { params });
+  if (range?.StartDate) {
+    params = params.set('StartDate', range.StartDate);
   }
+  if (range?.EndDate) {
+    params = params.set('EndDate', range.EndDate);
+  }
+
+return this.http.get<DailyNote[]>(`${this.baseUrl}/all/${agentId}`, { params });
+}
 
   /** Search notes by text content */
   searchNotes(agentId: string, searchTerm: string): Observable<DailyNote[]> {

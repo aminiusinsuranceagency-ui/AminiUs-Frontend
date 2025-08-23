@@ -1,0 +1,36 @@
+<div class="toast-overlay" *ngIf="toast">
+  <div class="toast-card" [ngClass]="toast.type" [@slideIn]>
+    
+    <!-- Header -->
+    <div class="toast-header">
+      <i class="fas"
+        [ngClass]="{
+          'fa-check-circle': toast.type === 'success',
+          'fa-exclamation-triangle': toast.type === 'warning',
+          'fa-times-circle': toast.type === 'error',
+          'fa-info-circle': toast.type === 'info',
+          'fa-bell': toast.type === 'reminder'
+        }">
+      </i>
+      <h3>{{ toast.title }}</h3>
+      <button class="toast-close" (click)="onClose()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="toast-body">
+      <p>{{ toast.message }}</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="toast-actions" *ngIf="toast.actions?.length">
+      <button *ngFor="let action of toast.actions"
+              (click)="onAction(action)"
+              [ngClass]="['toast-btn', action.style || 'primary']">
+        {{ action.label }}
+      </button>
+    </div>
+    
+  </div>
+</div>

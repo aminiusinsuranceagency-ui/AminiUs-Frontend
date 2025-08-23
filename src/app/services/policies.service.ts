@@ -3,7 +3,7 @@ import { HttpClient, HttpParams, HttpHeaders, HttpErrorResponse } from '@angular
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { SessionService } from './session.service';
-
+// bbtn butl zocb bvue
 // Import all the interfaces from your policy interfaces file
 import {
   PolicyCatalog,
@@ -54,6 +54,8 @@ import {
   CleanupResponse,
   PolicyValidationResponse
 } from '../interfaces/policy';
+import { Client } from '../interfaces/client';
+import { ClientWithPolicies, ClientWithPoliciesFilter } from '../interfaces/CLIENTS-POLICY';
 
 
 
@@ -61,17 +63,21 @@ import {
   providedIn: 'root'
 })
 export class PolicyService {
-  private readonly baseUrl = 'http://localhost:3000/api/policies';
-  private readonly autocompleteUrl = 'http://localhost:3000/api/policies/autocomplete';
 
+  private readonly baseUrl = 'http://localhost:3000/api/policies';
+  private readonly autocompeteUrl = 'http://localhost:3000/api/policies/autocomplete';
+  private readonly ApiUrl = 'http://localhost:3000/api/clients';
+    
   // Reactive state subjects
   private policiesSubject = new BehaviorSubject<ClientPolicy[]>([]);
   private policyCatalogSubject = new BehaviorSubject<PolicyCatalog[]>([]);
+    private clientsWithPoliciesSubject = new BehaviorSubject<ClientWithPolicies[]>([]);
   private loadingSubject = new BehaviorSubject<boolean>(false);
 
   // Observable streams
   public policies$ = this.policiesSubject.asObservable();
   public policyCatalog$ = this.policyCatalogSubject.asObservable();
+    public clientsWithPolicies$ = this.clientsWithPoliciesSubject.asObservable();
   public loading$ = this.loadingSubject.asObservable();
 
   constructor(
@@ -132,7 +138,10 @@ export class PolicyService {
     
     return throwError(() => new Error(errorMessage));
   }
-
+ /** Get client by ID */
+   getById(agentId: string, clientId: string): Observable<Client> {
+     return this.http.get<Client>(`${this.ApiUrl}/${agentId}/${clientId}`);
+   }
   // ============================================
   // HEALTH CHECK
   // ============================================
@@ -141,6 +150,29 @@ export class PolicyService {
     return this.http.get(`${this.baseUrl}/health`, this.getHttpOptions())
       .pipe(catchError(this.handleError));
   }
+
+/** 🔹 Get all clients with their assigned policies */
+/** 🔹 Get all clients with their assigned policies */
+public getClientsWithPolicies(filters?: ClientWithPoliciesFilter): Observable<ClientWithPolicies[]> {
+  this.setLoading(true);
+  const params = filters ? this.buildHttpParams(filters) : new HttpParams();
+
+  return this.http.get<ClientWithPolicies[]>(`${this.baseUrl}/clients-with-policies`, {
+    ...this.getHttpOptions(),
+    params
+  }).pipe(
+    tap(clients => {
+      console.log("Clients extracted from response:", clients);
+      this.clientsWithPoliciesSubject.next(clients);
+      this.setLoading(false);
+    }),
+    catchError(err => {
+      this.setLoading(false);
+      return this.handleError(err);
+    })
+  );
+}
+
 
   // ============================================
   // POLICY CATALOG OPERATIONS
@@ -165,6 +197,24 @@ export class PolicyService {
       })
     );
   }
+  // policy.service.ts
+
+getPolicyNameDropDown(agentId: string): Observable<{ policyId: string; policyName: string }[]> {
+  const params = new HttpParams().set('agentId', agentId);
+
+  return this.http.get<PolicyResponse<PolicyCatalog[]>>(`${this.baseUrl}/catalog`, {
+    ...this.getHttpOptions(),
+    params
+  }).pipe(
+    // Map to only policyId + policyName for dropdown
+    map(response => (response.data || []).map(item => ({
+      policyId: item.policyId,
+      policyName: item.policyName
+    }))),
+    catchError(this.handleError)
+  );
+}
+
 
   createPolicyCatalogItem(request: CreatePolicyCatalogRequest): Observable<CreateResponse> {
     return this.http.post<PolicyResponse<CreateResponse>>(`${this.baseUrl}/catalog`, request, this.getHttpOptions())
@@ -241,14 +291,31 @@ export class PolicyService {
       );
   }
 
-  createClientPolicy(request: CreateClientPolicyRequest): Observable<CreateResponse> {
-    return this.http.post<PolicyResponse<CreateResponse>>(`${this.baseUrl}/policies`, request, this.getHttpOptions())
-      .pipe(
-        map(response => response.data!),
-        tap(() => this.refreshClientPolicies()),
-        catchError(this.handleError)
-      );
-  }
+ createClientPolicy(request: CreateClientPolicyRequest): Observable<CreateResponse> {
+  console.log('[ClientPolicyService] Sending request to backend:', request);
+
+  return this.http.post<PolicyResponse<CreateResponse>>(
+      `${this.baseUrl}/policies`,
+      request,
+      this.getHttpOptions()
+    ).pipe(
+      tap(response => {
+        console.log('[ClientPolicyService] Raw backend response:', response);
+      }),
+      map(response => {
+        console.log('[ClientPolicyService] Extracted response.data:', response.data);
+        return response.data!;
+      }),
+      tap(() => {
+        console.log('[ClientPolicyService] Refreshing client policies...');
+        this.refreshClientPolicies();
+      }),
+      catchError(err => {
+        console.error('[ClientPolicyService] Error occurred while creating policy:', err);
+        return this.handleError(err);
+      })
+    );
+}
 
   updateClientPolicy(id: string, request: Omit<UpdateClientPolicyRequest, 'policyId'>): Observable<UpdateResponse> {
     return this.http.put<PolicyResponse<UpdateResponse>>(`${this.baseUrl}/policies/${id}`, request, this.getHttpOptions())
@@ -316,7 +383,7 @@ export class PolicyService {
   getExpiringPolicies(request?: ExpiringPoliciesRequest): Observable<ClientPolicy[]> {
     const params = request ? this.buildHttpParams(request) : new HttpParams();
     
-    return this.http.get<PolicyResponse<ClientPolicy[]>>(`${this.baseUrl}/policies/expiring`, {
+    return this.http.get<PolicyResponse<ClientPolicy[]>>(`${this.baseUrl}/expiring`, {
       ...this.getHttpOptions(),
       params
     }).pipe(
@@ -378,7 +445,7 @@ export class PolicyService {
   }
 
   batchExpirePolicies(request: BatchExpirePoliciesRequest): Observable<UpdateResponse> {
-    return this.http.post<PolicyResponse<UpdateResponse>>(`${this.baseUrl}/policies/bulk/expire`, request, this.getHttpOptions())
+    return this.http.post<PolicyResponse<UpdateResponse>>(`${this.baseUrl}/bulk/expire`, request, this.getHttpOptions())
       .pipe(
         map(response => response.data!),
         tap(() => this.refreshClientPolicies()),
@@ -508,6 +575,10 @@ export class PolicyService {
         map(response => response.data!),
         catchError(this.handleError)
       );
+  }
+  // ✅ Soft Delete Policy Type
+  softDeletePolicyType(typeId: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/types/${typeId}/soft`);
   }
 
   // ============================================
@@ -1060,7 +1131,6 @@ export class PolicyService {
     console.log('Cached Policies Count:', this.policiesSubject.value.length);
     console.log('Cached Catalog Count:', this.policyCatalogSubject.value.length);
     console.log('Base URL:', this.baseUrl);
-    console.log('Autocomplete URL:', this.autocompleteUrl);
     console.log('================================');
   }
 

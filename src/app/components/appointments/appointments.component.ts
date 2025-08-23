@@ -3,9 +3,14 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AppointmentsService, Appointment, UpdateAppointmentRequest } from '../../services/appointments.service';
 import { SessionService } from '../../services/session.service';
+import { RemindersService } from '../../services/reminders.service';
+import { CreateReminderRequest } from '../../interfaces/Reminder';
 import { Observable, forkJoin, Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 import { NavbarComponent } from "../navbar/navbar.component";
 import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
+import { ClientDisplay } from '../clients/clients.component';
+import { ToastService } from '../../services/toast.service';
 
 interface ClientSearchResult {
   ClientId: string;
@@ -17,7 +22,7 @@ interface ClientSearchResult {
 @Component({
   selector: 'app-appointments',
   standalone: true,
-  imports: [FormsModule, CommonModule, ReactiveFormsModule, NavbarComponent],
+  imports: [FormsModule, CommonModule, ReactiveFormsModule],
   templateUrl: './appointments.component.html',
   styleUrls: ['./appointments.component.css']
 })
@@ -38,7 +43,7 @@ export class AppointmentsComponent implements OnInit {
   statusFilter = 'all';
   typeFilter = 'all';
   priorityFilter = 'all';
-  dateRangeFilter = 'all'; // today, week, month, all
+  dateRangeFilter = 'all';
   
   // Modal properties
   showAppointmentModal = false;
@@ -76,13 +81,24 @@ export class AppointmentsComponent implements OnInit {
   loading = false;
   saving = false;
   searchingClients = false;
+  creatingReminder = false;
 
   // User session data
   agentId: string | null = null;
 
+  // Dropdown state
+  activeDropdown: string | null = null;
+  clientId!: string | null;
+  
+
+
   constructor(
+    private route: ActivatedRoute,
+      private toastService: ToastService,
+
     private appointmentsService: AppointmentsService,
     private sessionService: SessionService,
+    private remindersService: RemindersService,
     private http: HttpClient
   ) { 
     // Setup client search with debounce
@@ -108,11 +124,18 @@ export class AppointmentsComponent implements OnInit {
         this.searchingClients = false;
       }
     });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+      if (!event.target || !(event.target as Element).closest('.dropdown')) {
+        this.activeDropdown = null;
+      }
+    });
   }
 
   ngOnInit(): void {
     this.initializeComponent();
-  }
+}
 
   private initializeComponent(): void {
     // Get agent ID from session
@@ -127,6 +150,16 @@ export class AppointmentsComponent implements OnInit {
     this.loadAppointments();
     this.generateCalendar();
     this.generateWeekView();
+  }
+
+  // Dropdown methods
+  toggleDropdown(appointmentId: string, event: Event): void {
+    event.stopPropagation();
+    this.activeDropdown = this.activeDropdown === appointmentId ? null : appointmentId;
+  }
+
+  closeDropdown(): void {
+    this.activeDropdown = null;
   }
 
   // Client search methods
@@ -149,7 +182,6 @@ export class AppointmentsComponent implements OnInit {
     this.clientSearchTerm = value;
     this.appointmentForm.clientName = value;
     
-    // Clear selected client if user types something different
     if (this.selectedClient && value !== this.selectedClient.FullName) {
       this.selectedClient = null;
       this.appointmentForm.clientId = '';
@@ -175,7 +207,6 @@ export class AppointmentsComponent implements OnInit {
   }
 
   onClientNameBlur(): void {
-    // Delay hiding dropdown to allow for click events
     setTimeout(() => {
       this.showClientDropdown = false;
     }, 200);
@@ -184,6 +215,102 @@ export class AppointmentsComponent implements OnInit {
   onClientNameFocus(): void {
     if (this.clientSearchResults.length > 0) {
       this.showClientDropdown = true;
+    }
+  }
+
+  // Time formatting method
+  formatFriendlyTime(timeString: string): string {
+    if (!timeString) return '';
+    
+    try {
+      // Handle different time formats
+      let time24: string;
+      
+      if (timeString.includes(':')) {
+        time24 = timeString;
+      } else if (timeString.length === 4) {
+        // "0900" format
+        time24 = `${timeString.substring(0, 2)}:${timeString.substring(2, 4)}`;
+      } else {
+        return timeString; // Return as-is if format unknown
+      }
+
+      const [hours, minutes] = time24.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      
+      return date.toLocaleTimeString([], { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return timeString;
+    }
+  }
+async createReminder(appointment: Appointment): Promise<void> {
+  if (!this.agentId) return;
+
+  this.creatingReminder = true;
+  this.closeDropdown();
+
+  try {
+    const appointmentDate = new Date(appointment.appointmentDate);
+    const reminderDate = new Date(appointmentDate);
+    reminderDate.setDate(appointmentDate.getDate() - 1);
+
+    const reminderRequest: CreateReminderRequest = {
+      ClientId: appointment.clientId,
+      AppointmentId: appointment.appointmentId,
+      ReminderType: 'Visit',
+      Title: `Visit Reminder: ${appointment.title}`,
+      Description: `Reminder for upcoming appointment with ${appointment.clientName}`,
+      ReminderDate: reminderDate.toISOString().split('T')[0],
+      ReminderTime: '09:00:00',
+      ClientName: appointment.clientName,
+      Priority: appointment.priority || 'Medium',
+      EnableSMS: true,
+      EnableWhatsApp: true,
+      EnablePushNotification: true,
+      AdvanceNotice: '1 day',
+      CustomMessage: `Don't forget your appointment on ${appointmentDate.toLocaleDateString()} at ${this.formatFriendlyTime(appointment.startTime || '')}`,
+      AutoSend: true,
+      Notes: `Auto-created reminder for appointment: ${appointment.title}`
+    };
+
+    await this.remindersService.createReminder(this.agentId, reminderRequest).toPromise();
+
+    this.updateAppointmentReminderStatus(appointment.appointmentId!, true);
+
+    this.toastService.show({
+      type: 'success',
+      title: 'Reminder Created',
+      message: 'Visit reminder created successfully!',
+      duration: 3000
+    });
+
+  } catch (error) {
+    console.error('Error creating reminder:', error);
+
+    this.toastService.show({
+      type: 'error',
+      title: 'Failed',
+      message: 'Failed to create reminder. Please try again.',
+      duration: 4000
+    });
+  } finally {
+    this.creatingReminder = false;
+  }
+}
+
+
+
+  private updateAppointmentReminderStatus(appointmentId: string, reminderSet: boolean): void {
+    const appointment = this.appointments.find(a => a.appointmentId === appointmentId);
+    if (appointment) {
+      appointment.reminderSet = reminderSet;
+      // You might want to also update this in the backend
     }
   }
 
@@ -324,6 +451,7 @@ export class AppointmentsComponent implements OnInit {
   }
 
   openAppointmentModal(appointment?: Appointment): void {
+    console.log("openAppointmentModal fired")
     this.isEditMode = !!appointment;
     this.selectedAppointment = appointment || null;
     
@@ -336,11 +464,9 @@ export class AppointmentsComponent implements OnInit {
     if (appointment) {
       this.appointmentForm = { ...appointment };
       this.clientSearchTerm = appointment.clientName || '';
-      // Convert date to string format for form input
       if (appointment.appointmentDate) {
         this.appointmentForm.appointmentDate = new Date(appointment.appointmentDate).toISOString().split('T')[0] as any;
       }
-      // Set selected client if we have the data
       if (appointment.clientId && appointment.clientName) {
         this.selectedClient = {
           ClientId: appointment.clientId,
@@ -427,7 +553,7 @@ export class AppointmentsComponent implements OnInit {
       case 'Confirmed': return '#27ae60';
       case 'In Progress': return '#3498db';
       case 'Completed': return '#2ecc71';
-      case 'Cancelled': return '#e74c3c';
+      case 'Cancelled': return '#dc2626';
       case 'Rescheduled': return '#9b59b6';
       default: return '#95a5a6';
     }
@@ -435,220 +561,254 @@ export class AppointmentsComponent implements OnInit {
 
   getPriorityColor(priority: string): string {
     switch (priority) {
-      case 'High': return '#e74c3c';
+      case 'High': return '#dc2626';
       case 'Medium': return '#f39c12';
       case 'Low': return '#27ae60';
       default: return '#95a5a6';
     }
   }
 
-/************ Data loading ************/
-loadAppointments(): void {
-  if (!this.agentId) return;
+  /************ Data loading ************/
+  loadAppointments(): void {
+    if (!this.agentId) return;
 
-  this.loading = true;
-  console.log('loadAppointments: requesting appointments for agent', this.agentId);
+    this.loading = true;
+    console.log('loadAppointments: requesting appointments for agent', this.agentId);
 
-  this.appointmentsService.getAllAppointments().subscribe({
-    next: (response: any) => {
-      console.log('loadAppointments: raw response', response);
+    this.appointmentsService.getAllAppointments().subscribe({
+      next: (response: any) => {
+        console.log('loadAppointments: raw response', response);
 
-      let appointmentsData: Appointment[] = [];
-      if (Array.isArray(response)) {
-        appointmentsData = response;
-      } else if (response && Array.isArray(response.data)) {
-        appointmentsData = response.data;
-      } else if (response && Array.isArray(response.appointments)) {
-        appointmentsData = response.appointments;
-      } else if (response && typeof response === 'object' && Object.keys(response).length > 0) {
-        appointmentsData = [response];
+        let appointmentsData: Appointment[] = [];
+        if (Array.isArray(response)) {
+          appointmentsData = response;
+        } else if (response && Array.isArray(response.data)) {
+          appointmentsData = response.data;
+        } else if (response && Array.isArray(response.appointments)) {
+          appointmentsData = response.appointments;
+        } else if (response && typeof response === 'object' && Object.keys(response).length > 0) {
+          appointmentsData = [response];
+        }
+
+        // Normalize and add formatted time
+        this.appointments = appointmentsData.map(a => ({
+          ...a,
+          formattedTime: this.formatAppointmentTime(a)
+        }));
+
+        console.log('loadAppointments: normalized appointments count =', this.appointments.length);
+
+        this.applyFilters();
+        this.calculateStatistics();
+        this.generateCalendar();
+        this.generateWeekView();
+
+        this.loading = false;
+      },
+      error: (error: any) => {
+        console.error('loadAppointments: error', error);
+        alert('Failed to load appointments: ' + (error?.message || error));
+        this.appointments = [];
+        this.loading = false;
       }
-
-      // Normalize and add formatted time
-      this.appointments = appointmentsData.map(a => ({
-        ...a,
-        formattedTime: this.formatAppointmentTime(a)
-      }));
-
-      console.log('loadAppointments: normalized appointments count =', this.appointments.length);
-
-      this.applyFilters();
-      this.calculateStatistics();
-      this.generateCalendar();
-      this.generateWeekView();
-
-      this.loading = false;
-    },
-    error: (error: any) => {
-      console.error('loadAppointments: error', error);
-      alert('Failed to load appointments: ' + (error?.message || error));
-      this.appointments = [];
-      this.loading = false;
-    }
-  });
-}
+    });
+  }
 
   /************ Create / Update / Delete ************/
 
   saveAppointment(): void {
-    if (!this.agentId || this.saving) return;
+  if (!this.agentId || this.saving) return;
 
-    // Validate required fields: title, clientName, date, startTime, endTime
-    if (!this.appointmentForm.title || !this.appointmentForm.clientName ||
-      !this.appointmentForm.appointmentDate || !this.appointmentForm.startTime ||
-      !this.appointmentForm.endTime) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Validate that a client is selected (has clientId)
-    if (!this.appointmentForm.clientId) {
-      alert('Please select a valid client from the dropdown');
-      return;
-    }
-
-    this.saving = true;
-    console.log('saveAppointment: formData=', this.appointmentForm);
-
-    // Build payload for API using service helper
-    const payload = this.appointmentsService.createAppointmentPayload(this.appointmentForm);
-
-    if (this.isEditMode && this.selectedAppointment) {
-      // Update flow
-      const appointmentId = this.selectedAppointment.appointmentId;
-      const updatePayload: UpdateAppointmentRequest = this.appointmentsService.createUpdateAppointmentPayload(this.appointmentForm);
-      console.log('saveAppointment: updating appointment', appointmentId, updatePayload);
-
-      this.appointmentsService.update(appointmentId, updatePayload).subscribe({
-        next: (res) => {
-          console.log('saveAppointment: update success', res);
-          alert('Appointment updated successfully');
-          this.saving = false;
-          this.closeAppointmentModal();
-          this.loadAppointments();
-        },
-        error: (err) => {
-          console.error('saveAppointment: update error', err);
-          alert('Failed to update appointment: ' + (err?.message || err));
-          this.saving = false;
-        }
-      });
-
-    } else {
-      // Create flow
-      console.log('saveAppointment: creating appointment payload=', payload);
-
-      this.appointmentsService.create(payload).subscribe({
-        next: (res) => {
-          console.log('saveAppointment: create success', res);
-          alert('Appointment created successfully');
-          this.saving = false;
-          this.closeAppointmentModal();
-          this.loadAppointments();
-        },
-        error: (err) => {
-          console.error('saveAppointment: create error', err);
-          alert('Failed to create appointment: ' + (err?.message || err));
-          this.saving = false;
-        }
-      });
-    }
+  if (!this.appointmentForm.title || !this.appointmentForm.clientName ||
+    !this.appointmentForm.appointmentDate || !this.appointmentForm.startTime ||
+    !this.appointmentForm.endTime) {
+    this.toastService.show({
+      type: 'warning',
+      message: 'Please fill in all required fields',
+      duration: 4000
+    });
+    return;
   }
 
-  deleteAppointment(appointmentId: string): void {
-    if (!confirm('Are you sure you want to delete this appointment?')) return;
-    if (!this.agentId) return;
+  if (!this.appointmentForm.clientId) {
+    this.toastService.show({
+      type: 'error',
+      message: 'Please select a valid client from the dropdown',
+      duration: 4000
+    });
+    return;
+  }
 
-    console.log('deleteAppointment: deleting', appointmentId);
-    this.appointmentsService.delete(appointmentId).subscribe({
+  this.saving = true;
+  console.log('saveAppointment: formData=', this.appointmentForm);
+
+  const payload = this.appointmentsService.createAppointmentPayload(this.appointmentForm);
+
+  if (this.isEditMode && this.selectedAppointment) {
+    const appointmentId = this.selectedAppointment.appointmentId;
+    const updatePayload: UpdateAppointmentRequest =
+      this.appointmentsService.createUpdateAppointmentPayload(this.appointmentForm);
+
+    console.log('saveAppointment: updating appointment', appointmentId, updatePayload);
+
+    this.appointmentsService.update(appointmentId, updatePayload).subscribe({
       next: (res) => {
-        console.log('deleteAppointment: success', res);
-        alert('Appointment deleted');
+        console.log('saveAppointment: update success', res);
+        this.toastService.show({
+          type: 'success',
+          message: 'Appointment updated successfully',
+          duration: 3000
+        });
+        this.saving = false;
+        this.closeAppointmentModal();
         this.loadAppointments();
       },
       error: (err) => {
-        console.error('deleteAppointment: error', err);
-        alert('Failed to delete appointment: ' + (err?.message || err));
+        console.error('saveAppointment: update error', err);
+        this.toastService.show({
+          type: 'error',
+          message: 'Failed to update appointment: ' + (err?.message || err),
+          duration: 5000
+        });
+        this.saving = false;
       }
     });
-  }
 
-  updateAppointmentStatus(appointmentId: string, status: Appointment['status']): void {
-    if (!this.agentId) return;
+  } else {
+    console.log('saveAppointment: creating appointment payload=', payload);
 
-    console.log('updateAppointmentStatus: appointmentId=', appointmentId, 'status=', status);
-    this.appointmentsService.updateStatus(appointmentId, status).subscribe({
+    this.appointmentsService.create(payload).subscribe({
       next: (res) => {
-        console.log('updateAppointmentStatus: success', res);
-        alert('Appointment status updated');
+        console.log('saveAppointment: create success', res);
+        this.toastService.show({
+          type: 'success',
+          message: 'Appointment created successfully',
+          duration: 3000
+        });
+        this.saving = false;
+        this.closeAppointmentModal();
         this.loadAppointments();
       },
       error: (err) => {
-        console.error('updateAppointmentStatus: error', err);
-        alert('Failed to update appointment status: ' + (err?.message || err));
+        console.error('saveAppointment: create error', err);
+        this.toastService.show({
+          type: 'error',
+          message: 'Failed to create appointment: ' + (err?.message || err),
+          duration: 5000
+        });
+        this.saving = false;
       }
     });
   }
- // Parse "9:00", "09:00", "09:00:00", "9:00 AM", "9 AM", "0900"
-private parseTimeString(t?: string): { h: number; m: number } | null {
-  if (!t) return null;
-  const s = String(t).trim();
-
-  // "0900" or "900"
-  if (/^\d{3,4}$/.test(s)) {
-    const v = parseInt(s, 10);
-    const h = Math.floor(v / 100);
-    const m = v % 100;
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { h, m };
-    return null;
-  }
-
-  // "9", "9 AM", "9:00", "9:00 AM", "09:00:00"
-  const match = s.match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(AM|PM)?$/i);
-  if (!match) return null;
-
-  let hour = parseInt(match[1], 10);
-  const minute = match[2] ? parseInt(match[2], 10) : 0;
-  const ampm = match[3]?.toUpperCase();
-
-  if (isNaN(hour) || isNaN(minute)) return null;
-
-  if (ampm) {
-    if (hour === 12) hour = 0;
-    if (ampm === 'PM') hour += 12;
-  }
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-
-  return { h: hour, m: minute };
 }
 
-private formatAppointmentTime(appointment: Appointment): string {
-  const start = this.parseTimeString(appointment.startTime);
-  const end = this.parseTimeString(appointment.endTime);
 
-  // If both missing, nothing to show
-  if (!start && !end) return '';
+deleteAppointment(appointmentId: string): void {
+  if (!this.agentId) return;
 
-  // Fallback: show raw string if parsing fails
-  if (!start || !end) {
-    return [appointment.startTime, appointment.endTime]
-      .filter(Boolean)
-      .join(' – ');
+  this.toastService.confirm('Are you sure you want to delete this appointment?', ['Yes', 'No'])
+    .subscribe((action) => {
+      if (action === 'yes') {
+        this.closeDropdown();
+        console.log('deleteAppointment: deleting', appointmentId);
+
+        this.appointmentsService.delete(appointmentId).subscribe({
+          next: (res) => {
+            console.log('deleteAppointment: success', res);
+            this.toastService.show({
+              type: 'success',
+              message: 'Appointment deleted successfully',
+              duration: 3000
+            });
+            this.loadAppointments();
+          },
+          error: (err) => {
+            console.error('deleteAppointment: error', err);
+            this.toastService.show({
+              type: 'error',
+              message: 'Failed to delete appointment: ' + (err?.message || err),
+              duration: 5000
+            });
+          }
+        });
+      }
+    });
+}
+
+updateAppointmentStatus(appointmentId: string, status: Appointment['status']): void {
+  if (!this.agentId) return;
+
+  this.closeDropdown();
+  console.log('updateAppointmentStatus: appointmentId=', appointmentId, 'status=', status);
+
+  this.appointmentsService.updateStatus(appointmentId, status).subscribe({
+    next: (res) => {
+      console.log('updateAppointmentStatus: success', res);
+      this.toastService.show({
+        type: 'success',
+        message: `Appointment status updated to "${status}"`,
+        duration: 3000
+      });
+      this.loadAppointments();
+    },
+    error: (err) => {
+      console.error('updateAppointmentStatus: error', err);
+      this.toastService.show({
+        type: 'error',
+        message: 'Failed to update appointment status: ' + (err?.message || err),
+        duration: 5000
+      });
+    }
+  });
+}
+
+
+  private parseTimeString(t?: string): { h: number; m: number } | null {
+    if (!t) return null;
+    const s = String(t).trim();
+
+    if (/^\d{3,4}$/.test(s)) {
+      const v = parseInt(s, 10);
+      const h = Math.floor(v / 100);
+      const m = v % 100;
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { h, m };
+      return null;
+    }
+
+    const match = s.match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(AM|PM)?$/i);
+    if (!match) return null;
+
+    let hour = parseInt(match[1], 10);
+    const minute = match[2] ? parseInt(match[2], 10) : 0;
+    const ampm = match[3]?.toUpperCase();
+
+    if (isNaN(hour) || isNaN(minute)) return null;
+
+    if (ampm) {
+      if (hour === 12) hour = 0;
+      if (ampm === 'PM') hour += 12;
+    }
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+    return { h: hour, m: minute };
   }
-
-  // Base date to format time only
-  const base = new Date(2000, 0, 1);
-  const startDate = new Date(base);
-  startDate.setHours(start.h, start.m, 0, 0);
-  const endDate = new Date(base);
-  endDate.setHours(end.h, end.m, 0, 0);
+private formatAppointmentTime(appointment: Appointment): string {
+  if (!appointment.startTime && !appointment.endTime) return '';
 
   const opts: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: '2-digit'
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC'   // ✅ force UTC instead of browser local
   };
 
-  return `${startDate.toLocaleTimeString(undefined, opts)} – ${endDate.toLocaleTimeString(undefined, opts)}`;
+  const startDate = appointment.startTime ? new Date(appointment.startTime) : null;
+  const endDate = appointment.endTime ? new Date(appointment.endTime) : null;
+
+  const startStr = startDate ? startDate.toLocaleTimeString(undefined, opts) : '';
+  const endStr = endDate ? endDate.toLocaleTimeString(undefined, opts) : '';
+
+  return [startStr, endStr].filter(Boolean).join(' – ');
 }
 
 }

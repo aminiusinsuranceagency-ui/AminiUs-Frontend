@@ -23,6 +23,7 @@ export interface PolicyCategory {
 }
 
 export interface PolicyCatalogItem {
+companyName: any;
   policyCatalogId: string;
   policyName: string;
 }
@@ -42,6 +43,7 @@ export interface ClientPolicy {
 })
 export class AutocompleteService {
   private readonly baseUrl = 'http://localhost:3000/api/policies/autocomplete';
+  private readonly ApiUrl = 'http://localhost:3000/api/appointments';
 
   constructor(private http: HttpClient) {}
 
@@ -109,6 +111,19 @@ export class AutocompleteService {
     return this.http.get<ClientPolicy[]>(`${this.baseUrl}/client-policies`, { params })
       .pipe(catchError(this.handleError));
   }
+  searchClients(agentId: string, query: string) {
+  return this.http.get<any[]>(
+    `${this.ApiUrl}/${agentId}/clients/search`,
+    { params: { q: query } }
+  );
+}
+//dynamic autocomplete to fetch clients /Search Clients for Autocomplete
+getClients(agentId: string, query: string) {
+  return this.http.get<any[]>(
+    `${this.ApiUrl}/${agentId}/clients/search`,
+    { params: { q: query } }
+  );
+}
 
   // =====================
   // ERROR HANDLING

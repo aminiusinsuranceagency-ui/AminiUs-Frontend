@@ -1,408 +1,471 @@
-import { Component, OnInit } from '@angular/core';
-import { SessionService } from '../../services/session.service';
-import { AppointmentsService, Appointment } from '../../services/appointments.service';
-import { ClientsService} from '../../services/clients.service';
-import { RemindersService } from '../../services/reminders.service';
-import { AnalyticsService, DashboardStatistics } from '../../services/analytics.service';
-import { NotesService } from '../../services/notes.service';
-import { AgentProfile } from '../../interfaces/Agent';
-import { Observable, forkJoin } from 'rxjs';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { BirthdayReminder, PolicyExpiryReminder, Reminder } from '../../interfaces/Reminder';
+import { Router } from '@angular/router';
+import { Subject, forkJoin, interval, takeUntil, catchError, of } from 'rxjs';
+
+// Import services
+import { SessionService } from '../../services/session.service';
+import { ClientsService } from '../../services/clients.service';
+import { AppointmentsService } from '../../services/appointments.service';
+import { PolicyService } from '../../services/policies.service';
+import { NotesService } from '../../services/notes.service';
+
+// Import interfaces
+import { AgentProfile } from '../../interfaces/Agent';
+import { Client, ClientStatistics, Birthday } from '../../interfaces/client';
+import { Appointment, AppointmentStatistics } from '../../services/appointments.service';
+import { ClientPolicy, AgentDashboardSummary } from '../../interfaces/policy';
 import { DailyNote } from '../../interfaces/Note';
-import { ClientStatistics } from '../../interfaces/client';
-import { NavbarComponent } from "../navbar/navbar.component";
-import { Nl2brPipe } from './nl2br.pipe';
 
+// Import components
+import { NavbarComponent } from '../../components/navbar/navbar.component';
+import { Nl2brPipe } from "./nl2br.pipe";
 
-interface TodayActivity {
-  id: string;
-  type: 'appointment' | 'reminder' | 'birthday' | 'policy-expiry';
-  title: string;
-  subtitle: string;
-  time?: string;
-  status: string;
-  priority?: string;
-  icon: string;
-  color: string;
-  action?: () => void;
+interface DashboardData {
+  agent: AgentProfile | null;
+  clientStats: ClientStatistics | null;
+  appointmentStats: AppointmentStatistics | null;
+  policyStats: AgentDashboardSummary | null;
+  todayAppointments: Appointment[];
+  expiringPolicies: ClientPolicy[];
+  todayBirthdays: Birthday[];
+  recentClients: Client[];
+  todayNotes: DailyNote[];
+  quickActions: QuickAction[];
 }
 
-interface QuickStat {
-  label: string;
-  value: number;
+interface QuickAction {
+  title: string;
+  description: string;
+  icon: string;
+  route: string;
+  color: string;
+  count?: number;
+}
+
+interface StatCard {
+  title: string;
+  value: number | string;
   icon: string;
   color: string;
-  trend?: string;
+  trend?: {
+    value: number;
+    isPositive: boolean;
+  };
+  route?: string;
 }
 
 @Component({
   selector: 'app-dashboard',
-  standalone:true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NavbarComponent,Nl2brPipe],
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    Nl2brPipe
+],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit {
-  currentUser: AgentProfile | null = null;
-  agentId: string | null = null;
+export class DashboardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   
   // Loading states
   loading = true;
-  activitiesLoading = true;
-  statsLoading = true;
-  notesLoading = true;
+  loadingStates = {
+    clients: true,
+    appointments: true,
+    policies: true,
+    notes: true
+  };
 
-  // Data properties
-  todayActivities: TodayActivity[] = [];
-  quickStats: QuickStat[] = [];
-   todaysNotes: DailyNote[] = [];
-  newNotesContent = '';
-  
-  // Today's specific data
-  todaysAppointments: Appointment[] = [];
-  todaysReminders: Reminder[] = [];
-  birthdayClients: BirthdayReminder[] = [];
-  expiringPolicies: PolicyExpiryReminder[] = [];
-  
-  // Dashboard statistics
-  clientStats: ClientStatistics | null = null;
-  dashboardStats: DashboardStatistics | null = null;
+  // Dashboard data
+  dashboardData: DashboardData = {
+    agent: null,
+    clientStats: null,
+    appointmentStats: null,
+    policyStats: null,
+    todayAppointments: [],
+    expiringPolicies: [],
+    todayBirthdays: [],
+    recentClients: [],
+    todayNotes: [],
+    quickActions: []
+  };
 
   // UI state
-  showNotesEditor = false;
-  selectedActivity: TodayActivity | null = null;
   currentTime = new Date();
   greeting = '';
+  todayNotesText = '';
+  showNotesEditor = false;
+
+  // Stats cards configuration
+  statCards: StatCard[] = [];
 
   constructor(
     private sessionService: SessionService,
-    private appointmentsService: AppointmentsService,
     private clientsService: ClientsService,
-    private remindersService: RemindersService,
-    private analyticsService: AnalyticsService,
-    private notesService: NotesService
+    private appointmentsService: AppointmentsService,
+    private policyService: PolicyService,
+    private notesService: NotesService,
+    private router: Router
   ) {
-    // Update time every minute
-    setInterval(() => {
-      this.currentTime = new Date();
-      this.updateGreeting();
-    }, 60000);
+    this.initializeQuickActions();
   }
 
   ngOnInit(): void {
-    this.initializeDashboard();
-  }
-
-  private initializeDashboard(): void {
-    this.currentUser = this.sessionService.getCurrentUser();
-    this.agentId = this.sessionService.getAgentId();
-    
-    if (!this.agentId) {
-      console.error('No agent ID found, redirecting to login');
-      this.sessionService.logout();
-      return;
-    }
-
-    this.updateGreeting();
+    this.dashboardData.agent = this.sessionService.getCurrentUser();
+    this.setGreeting();
     this.loadDashboardData();
+    this.startRealTimeUpdates();
   }
 
-  private updateGreeting(): void {
-    const hour = this.currentTime.getHours();
-    const firstName = this.currentUser?.FirstName || 'Agent';
-    
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private setGreeting(): void {
+    const hour = new Date().getHours();
     if (hour < 12) {
-      this.greeting = `Good Morning, ${firstName}`;
+      this.greeting = 'Good Morning';
     } else if (hour < 17) {
-      this.greeting = `Good Afternoon, ${firstName}`;
+      this.greeting = 'Good Afternoon';
     } else {
-      this.greeting = `Good Evening, ${firstName}`;
+      this.greeting = 'Good Evening';
     }
   }
 
-
-private loadDashboardData(): void {
-  if (!this.agentId) return;
-
-  this.loading = true;
-  const today = new Date().toISOString().split('T')[0];
-
-  forkJoin({
-    appointments: this.appointmentsService.getToday(),
-    reminders: RemindersService.getToday(this.agentId),
-    birthdays: RemindersService.getBirthdays(this.agentId),
-    policyExpiries: RemindersService.getPolicyExpiries(this.agentId, 7),
-    clientStats: this.clientsService.getStatistics(this.agentId),
-    notes: this.notesService.getDailyNotes(this.agentId, today)
-  }).subscribe({
-    next: (data) => {
-      this.todaysAppointments = data.appointments || [];
-      this.todaysReminders = data.reminders || [];
-      this.birthdayClients = data.birthdays || [];
-      this.expiringPolicies = data.policyExpiries || [];
-      this.clientStats = data.clientStats;
-      this.todaysNotes = data.notes || [];
-
-      this.processActivities();
-      this.generateQuickStats();
-
-      this.loading = false;
-      this.activitiesLoading = false;
-      this.statsLoading = false;
-      this.notesLoading = false;
+  private initializeQuickActions(): void {
+  this.dashboardData.quickActions = [
+    {
+      title: 'Add Client',
+      description: 'Register a new client or prospect',
+      icon: 'fas fa-user-plus',
+      route: '/client',
+      color: 'blue-bg'
     },
-    error: (error) => {
-      console.error('Error loading dashboard data:', error);
-      this.loading = false;
-      this.activitiesLoading = false;
-      this.statsLoading = false;
-      this.notesLoading = false;
+    {
+      title: 'Schedule Appointment',
+      description: 'Book a meeting with a client',
+      icon: 'fas fa-calendar-plus',
+      route: '/appointment',
+      color: 'green-bg'
+    },
+    {
+      title: 'Create Policy',
+      description: 'Add a new insurance policy',
+      icon: 'fas fa-shield-alt',
+      route: '/policies',
+      color: 'purple-bg'
+    },
+    {
+      title: 'Reminders',
+      description: 'Get Up To Date with Reminders',
+      icon: 'fas fa-chart-bar',
+      route: '/reminders',
+      color: 'orange-bg'
     }
-  });
+  ];
 }
 
 
-  private processActivities(): void {
-    const activities: TodayActivity[] = [];
 
-    // Process appointments
-    this.todaysAppointments.forEach(appointment => {
-      activities.push({
-        id: appointment.appointmentId,
-        type: 'appointment',
-        title: appointment.title,
-        subtitle: `with ${appointment.clientName}`,
-        time: appointment.startTime,
-        status: appointment.status,
-        priority: appointment.priority,
-        icon: this.getAppointmentIcon(appointment.type),
-        color: this.getStatusColor(appointment.status)
-      });
-    });
+  private loadDashboardData(): void {
+    const agentId = this.sessionService.getAgentId();
+    if (!agentId) {
+      this.router.navigate(['/login']);
+      return;
+    }
 
-    // Process reminders
-    this.todaysReminders.forEach(reminder => {
-      activities.push({
-        id: reminder.ReminderId,
-        type: 'reminder',
-        title: reminder.Title,
-        subtitle: reminder.Description || '',
-        time: reminder.ReminderTime || '',
-        status: reminder.Status,
-        priority: reminder.Priority,
-        icon: this.getReminderIcon(reminder.ReminderType),
-        color: this.getPriorityColor(reminder.Priority)
-      });
-    });
+    const today = new Date().toISOString().split('T')[0];
 
-    // Process birthdays
-    this.birthdayClients.forEach(birthday => {
-      activities.push({
-        id: birthday.ClientId,
-        type: 'birthday',
-        title: `Birthday: ${birthday.FirstName} ${birthday.Surname}`,
-        subtitle: `Turning ${birthday.Age} today`,
-        status: 'pending',
-        icon: 'fas fa-birthday-cake',
-        color: '#e74c3c'
-      });
-    });
-
-    // Process expiring policies (within 7 days)
-    this.expiringPolicies.forEach(policy => {
-      if (policy.DaysUntilExpiry <= 7) {
-        activities.push({
-          id: policy.PolicyId,
-          type: 'policy-expiry',
-          title: `Policy Expiring: ${policy.PolicyName}`,
-          subtitle: `${policy.FirstName} ${policy.Surname} - ${policy.DaysUntilExpiry} days`,
-          status: policy.DaysUntilExpiry <= 3 ? 'urgent' : 'warning',
-          icon: 'fas fa-exclamation-triangle',
-          color: policy.DaysUntilExpiry <= 3 ? '#e74c3c' : '#f39c12'
-        });
+    // Load all data in parallel
+    forkJoin({
+      clientStats: this.clientsService.getStatistics(agentId).pipe(
+        catchError(err => {
+          console.error('Error loading client stats:', err);
+          return of(null);
+        })
+      ),
+      appointmentStats: this.appointmentsService.getStatistics().pipe(
+        catchError(err => {
+          console.error('Error loading appointment stats:', err);
+          return of(null);
+        })
+      ),
+      policyStats: this.policyService.getMyDashboard().pipe(
+        catchError(err => {
+          console.error('Error loading policy stats:', err);
+          return of(null);
+        })
+      ),
+      todayAppointments: this.appointmentsService.getToday().pipe(
+        catchError(err => {
+          console.error('Error loading today appointments:', err);
+          return of([]);
+        })
+      ),
+      expiringPolicies: this.policyService.getMyExpiringPolicies(30).pipe(
+        catchError(err => {
+          console.error('Error loading expiring policies:', err);
+          return of([]);
+        })
+      ),
+      todayBirthdays: this.clientsService.getBirthdays(agentId).pipe(
+        catchError(err => {
+          console.error('Error loading birthdays:', err);
+          return of([]);
+        })
+      ),
+      recentClients: this.clientsService.getAll(agentId, { 
+        PageSize: 10,
+        PageNumber: 1 
+      }).pipe(
+        catchError(err => {
+          console.error('Error loading recent clients:', err);
+          return of([]);
+        })
+      ),
+      todayNotes: this.notesService.getDailyNotes(agentId, today).pipe(
+        catchError(err => {
+          console.error('Error loading today notes:', err);
+          return of([]);
+        })
+      )
+    }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        this.dashboardData = { ...this.dashboardData, ...data };
+        this.todayNotesText = data.todayNotes?.[0]?.Notes || '';
+        this.updateStatCards();
+        this.updateLoadingStates();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading dashboard data:', error);
+        this.loading = false;
       }
-    });
-
-    // Sort activities by time and priority
-    this.todayActivities = activities.sort((a, b) => {
-      if (a.time && b.time) {
-        return a.time.localeCompare(b.time);
-      }
-      if (a.priority && b.priority) {
-        const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
-        return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
-      }
-      return 0;
     });
   }
 
-  private generateQuickStats(): void {
-    this.quickStats = [
+  private updateStatCards(): void {
+    const { clientStats, appointmentStats, policyStats } = this.dashboardData;
+    
+    this.statCards = [
       {
-        label: 'Total Clients',
-        value: this.clientStats?.TotalClients || 0,
+        title: 'Total Clients',
+        value: clientStats?.TotalClients || 0,
         icon: 'fas fa-users',
-        color: '#3498db'
+        color: 'bg-blue-500',
+        route: '/clients',
+        trend: {
+          value: clientStats?.NewThisWeek || 0,
+          isPositive: true
+        }
       },
       {
-        label: 'Today\'s Appointments',
-        value: this.todaysAppointments.length,
-        icon: 'fas fa-calendar-check',
-        color: '#2ecc71'
-      },
-      {
-        label: 'Active Reminders',
-        value: this.todaysReminders.filter(r => r.Status === 'Active').length,
-        icon: 'fas fa-bell',
-        color: '#f39c12'
-      },
-      {
-        label: 'Birthdays Today',
-        value: this.birthdayClients.length,
-        icon: 'fas fa-birthday-cake',
-        color: '#e74c3c'
-      },
-      {
-        label: 'Active Policies',
-        value: this.clientStats?.ActivePolicies || 0,
+        title: 'Active Policies',
+        value: policyStats?.activePolicies || 0,
         icon: 'fas fa-shield-alt',
-        color: '#9b59b6'
+        color: 'bg-green-500',
+        route: '/policies'
       },
       {
-        label: 'Expiring Soon',
-        value: this.expiringPolicies.filter(p => p.DaysUntilExpiry <= 7).length,
+        title: 'Today\'s Appointments',
+        value: appointmentStats?.todayCount || 0,
+        icon: 'fas fa-calendar-day',
+        color: 'bg-purple-500',
+        route: '/appointments'
+      },
+      {
+        title: 'Maturing Soon',
+        value: policyStats?.expiringIn30Days || 0,
         icon: 'fas fa-exclamation-triangle',
-        color: '#e67e22'
+        color: 'bg-red-500',
+        route: '/policies/expiring'
+      },
+      {
+        title: 'Total Prospects',
+        value: clientStats?.TotalProspects || 0,
+        icon: 'fas fa-user-clock',
+        color: 'bg-orange-500',
+        route: '/clients?filter=prospects'
+      },
+      {
+        title: 'This Week',
+        value: appointmentStats?.weekCount || 0,
+        icon: 'fas fa-calendar-week',
+        color: 'bg-indigo-500',
+        route: '/appointments/week'
       }
     ];
   }
 
-  private getAppointmentIcon(type: string): string {
-    const iconMap: { [key: string]: string } = {
-      'Call': 'fas fa-phone',
-      'Meeting': 'fas fa-handshake',
-      'Site Visit': 'fas fa-map-marker-alt',
-      'Policy Review': 'fas fa-file-alt',
-      'Claim Processing': 'fas fa-clipboard-check'
+  private updateLoadingStates(): void {
+    this.loadingStates = {
+      clients: false,
+      appointments: false,
+      policies: false,
+      notes: false
     };
-    return iconMap[type] || 'fas fa-calendar';
   }
 
-  private getReminderIcon(type: string): string {
-    const iconMap: { [key: string]: string } = {
-      'Call': 'fas fa-phone',
-      'Visit': 'fas fa-home',
-      'Policy Expiry': 'fas fa-exclamation-triangle',
-      'Birthday': 'fas fa-birthday-cake',
-      'Holiday': 'fas fa-gift',
-      'Custom': 'fas fa-bell'
-    };
-    return iconMap[type] || 'fas fa-bell';
+  private startRealTimeUpdates(): void {
+    // Update time every minute
+    interval(60000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.currentTime = new Date();
+    });
+
+    // Refresh data every 5 minutes
+    interval(300000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.loadDashboardData();
+    });
   }
 
-  private getStatusColor(status: string): string {
-    const colorMap: { [key: string]: string } = {
-      'Scheduled': '#3498db',
-      'Confirmed': '#2ecc71',
-      'In Progress': '#f39c12',
-      'Completed': '#27ae60',
-      'Cancelled': '#e74c3c',
-      'Rescheduled': '#f39c12',
-      'Active': '#2ecc71',
-      'urgent': '#e74c3c',
-      'warning': '#f39c12',
-      'pending': '#95a5a6'
-    };
-    return colorMap[status] || '#95a5a6';
+  // Event handlers
+  onQuickAction(action: QuickAction): void {
+    this.router.navigate([action.route]);
   }
 
-  private getPriorityColor(priority: string): string {
-    const colorMap: { [key: string]: string } = {
-      'High': '#e74c3c',
-      'Medium': '#f39c12',
-      'Low': '#2ecc71'
-    };
-    return colorMap[priority] || '#95a5a6';
+  onStatCardClick(card: StatCard): void {
+    if (card.route) {
+      this.router.navigate([card.route]);
+    }
   }
 
-  // UI Methods
-  toggleNotesEditor(): void {
-    this.showNotesEditor = !this.showNotesEditor;
-    if (this.showNotesEditor && this.todaysNotes.length > 0) {
-  this.newNotesContent = this.todaysNotes[0].Notes || '';
+  onAppointmentClick(appointment: Appointment): void {
+    this.router.navigate(['/appointments', appointment.appointmentId]);
+  }
+
+  onPolicyClick(policy: ClientPolicy): void {
+    this.router.navigate(['/policies', policy.policyId]);
+  }
+
+  onClientClick(client: Client): void {
+    this.router.navigate(['/clients', client.ClientId]);
+  }
+
+  onEditNotes(): void {
+    this.showNotesEditor = true;
+  }
+
+  onSaveNotes(): void {
+    const agentId = this.sessionService.getAgentId();
+    if (!agentId) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    this.notesService.saveDailyNotes(agentId, today, this.todayNotesText)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.showNotesEditor = false;
+          console.log('Notes saved successfully');
+        },
+        error: (error) => {
+          console.error('Error saving notes:', error);
+        }
+      });
+  }
+
+  onCancelNotes(): void {
+    this.showNotesEditor = false;
+    // Reset to original notes
+    this.todayNotesText = this.dashboardData.todayNotes?.[0]?.Notes || '';
+  }
+
+  // Utility methods
+  getAppointmentStatusColor(status: string): string {
+    const statusColors: { [key: string]: string } = {
+      'Scheduled': 'text-blue-600 bg-blue-100',
+      'Confirmed': 'text-green-600 bg-green-100',
+      'In Progress': 'text-yellow-600 bg-yellow-100',
+      'Completed': 'text-gray-600 bg-gray-100',
+      'Cancelled': 'text-red-600 bg-red-100',
+      'Rescheduled': 'text-purple-600 bg-purple-100'
+    };
+    return statusColors[status] || 'text-gray-600 bg-gray-100';
+  }
+
+  getPolicyStatusColor(policy: ClientPolicy): string {
+    if (this.policyService.isPolicyExpired(policy)) {
+      return 'text-red-600 bg-red-100';
+    } else if (this.policyService.isPolicyExpiringSoon(policy)) {
+      return 'text-yellow-600 bg-yellow-100';
+    } else if (policy.status === 'Active') {
+      return 'text-green-600 bg-green-100';
+    } else {
+      return 'text-gray-600 bg-gray-100';
+    }
+  }
+
+formatTime(timeString: string | null | undefined, use24h: boolean = false): string {
+  if (!timeString) return '';
+
+  try {
+    // If it's an ISO date string, extract just the time portion
+    if (timeString.includes('T')) {
+      const isoDate = new Date(timeString);
+      const hours = isoDate.getUTCHours();
+      const minutes = isoDate.getUTCMinutes();
+
+      if (!use24h) {
+        const suffix = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours % 12 || 12;
+        return `${displayHour}:${minutes.toString().padStart(2, '0')} ${suffix}`;
+      }
+
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    // Otherwise assume plain "HH:mm" or "HH:mm:ss"
+    const parts = timeString.split(':').map(p => p.trim());
+    if (parts.length < 2) return timeString;
+
+    let hours = Number(parts[0]);
+    let minutes = Number(parts[1]);
+
+    if (!use24h) {
+      const suffix = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      return `${hours}:${minutes.toString().padStart(2, '0')} ${suffix}`;
+    }
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } catch {
+    return timeString;
+  }
 }
 
-  }
 
-  saveNotes(): void {
-    if (!this.agentId) return;
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    this.notesService.saveDailyNotes(this.agentId, today, this.newNotesContent).subscribe({
-      next: (result) => {
-        console.log('Notes saved successfully');
-        this.loadTodaysNotes();
-        this.showNotesEditor = false;
-      },
-      error: (error) => {
-        console.error('Error saving notes:', error);
-      }
+formatDate(dateInput: string | Date): string {
+  if (!dateInput) return '';
+  
+  try {
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
+  } catch {
+    return String(dateInput);
   }
+}
 
-  private loadTodaysNotes(): void {
-    if (!this.agentId) return;
-    
-    const today = new Date().toISOString().split('T')[0];
-    this.notesService.getDailyNotes(this.agentId, today).subscribe({
-      next: (notes) => {
-        this.todaysNotes = notes;
-      },
-      error: (error) => {
-        console.error('Error loading notes:', error);
-      }
-    });
+  getDaysUntilExpiry(policy: ClientPolicy): number {
+    return this.policyService.getDaysUntilExpiry(policy) || 0;
   }
 
   refreshDashboard(): void {
+    this.loading = true;
     this.loadDashboardData();
-  }
-
-  selectActivity(activity: TodayActivity): void {
-    this.selectedActivity = activity;
-    // Here you could navigate to detailed view or show modal
-  }
-
-  getTimeUntil(time: string): string {
-    if (!time) return '';
-    
-    const now = new Date();
-    const activityTime = new Date();
-    const [hours, minutes] = time.split(':');
-    activityTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    
-    const diff = activityTime.getTime() - now.getTime();
-    const diffMinutes = Math.floor(diff / (1000 * 60));
-    
-    if (diffMinutes < 0) return 'Past due';
-    if (diffMinutes === 0) return 'Now';
-    if (diffMinutes < 60) return `${diffMinutes}m`;
-    
-    const diffHours = Math.floor(diffMinutes / 60);
-    const remainingMinutes = diffMinutes % 60;
-    return `${diffHours}h ${remainingMinutes}m`;
-  }
-
-  formatTime(time: string): string {
-    if (!time) return '';
-    
-    const [hours, minutes] = time.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes));
-    
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 }

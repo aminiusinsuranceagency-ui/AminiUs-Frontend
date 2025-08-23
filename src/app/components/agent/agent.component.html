@@ -1,1 +1,333 @@
-<p>agent works!</p>
+ <!-- Loading Overlay -->
+<div *ngIf="isLoading" class="loading-overlay">
+  <div class="spinner"></div>
+  <span>Loading...</span>
+</div>
+
+<!-- Main Container -->
+<div class="profile-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <i class="fas fa-user-circle"></i>
+          Profile
+        </h1>
+        <p class="page-subtitle">Manage your account settings and daily notes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error/Success Messages -->
+  <div *ngIf="errorMessage" class="error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ errorMessage }}
+    <button type="button" class="close-btn" (click)="errorMessage = ''">&times;</button>
+  </div>
+
+  <div *ngIf="successMessage" class="success-message">
+    <i class="fas fa-check-circle"></i>
+    {{ successMessage }}
+    <button type="button" class="close-btn" (click)="successMessage = ''">&times;</button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'profile'"
+      (click)="switchTab('profile')">
+      <i class="fas fa-user"></i>
+      Profile Information
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'notes'"
+      (click)="switchTab('notes')">
+      <i class="fas fa-sticky-note"></i>
+      Daily Notes
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'security'"
+      (click)="switchTab('security')">
+      <i class="fas fa-shield-alt"></i>
+      Security
+    </button>
+  </div>
+
+  <!-- Content Area -->
+  <div class="content-area">
+    
+    <!-- Profile Tab -->
+    <div *ngIf="activeTab === 'profile'" class="tab-content">
+      <div class="profile-section">
+        <div class="section-header">
+          <h2>Personal Information</h2>
+          <p>Update your profile details below</p>
+        </div>
+
+        <form [formGroup]="profileForm" (ngSubmit)="updateProfile()" class="profile-form">
+          <!-- Avatar Section -->
+          <div class="avatar-section">
+            <div class="avatar-preview">
+              <img 
+                *ngIf="currentUser?.Avatar; else defaultAvatar" 
+                [src]="currentUser?.Avatar" 
+                alt="Profile Avatar"
+                class="avatar-img">
+              <ng-template #defaultAvatar>
+                <div class="default-avatar">
+                  <i class="fas fa-user"></i>
+                </div>
+              </ng-template>
+            </div>
+            <div class="avatar-controls">
+              <label for="avatar-upload" class="avatar-upload-btn">
+                <i class="fas fa-camera"></i>
+                Change Photo
+              </label>
+              <input 
+                type="file" 
+                id="avatar-upload" 
+                accept="image/*" 
+                (change)="onAvatarChange($event)"
+                hidden>
+            </div>
+          </div>
+
+          <!-- Form Fields -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="firstName">First Name *</label>
+              <input 
+                type="text" 
+                id="firstName"
+                formControlName="firstName"
+                [class.error]="isFieldInvalid(profileForm, 'firstName')"
+                placeholder="Enter your first name">
+              <div *ngIf="isFieldInvalid(profileForm, 'firstName')" class="field-error">
+                {{ getFieldError(profileForm, 'firstName') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="lastName">Last Name *</label>
+              <input 
+                type="text" 
+                id="lastName"
+                formControlName="lastName"
+                [class.error]="isFieldInvalid(profileForm, 'lastName')"
+                placeholder="Enter your last name">
+              <div *ngIf="isFieldInvalid(profileForm, 'lastName')" class="field-error">
+                {{ getFieldError(profileForm, 'lastName') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email Address *</label>
+              <input 
+                type="email" 
+                id="email"
+                formControlName="email"
+                [class.error]="isFieldInvalid(profileForm, 'email')"
+                placeholder="Enter your email address">
+              <div *ngIf="isFieldInvalid(profileForm, 'email')" class="field-error">
+                {{ getFieldError(profileForm, 'email') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone Number *</label>
+              <input 
+                type="tel" 
+                id="phone"
+                formControlName="phone"
+                [class.error]="isFieldInvalid(profileForm, 'phone')"
+                placeholder="Enter your phone number">
+              <div *ngIf="isFieldInvalid(profileForm, 'phone')" class="field-error">
+                {{ getFieldError(profileForm, 'phone') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="role">Role</label>
+              <input 
+                type="text" 
+                id="role"
+                formControlName="role"
+                placeholder="Enter your role/position">
+            </div>
+
+            <div class="form-group">
+              <label for="companyName">Company Name</label>
+              <input 
+                type="text" 
+                id="companyName"
+                formControlName="companyName"
+                placeholder="Enter your company name">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              [disabled]="profileForm.invalid || isLoading">
+              <i class="fas fa-save"></i>
+              Update Profile
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notes Tab -->
+    <div *ngIf="activeTab === 'notes'" class="tab-content">
+      <div class="notes-section">
+        <div class="section-header">
+          <h2>Daily Notes</h2>
+          <p>Keep track of your daily activities and important information</p>
+        </div>
+
+        <div class="notes-controls">
+          <div class="date-controls">
+            <button class="quick-nav-btn" (click)="navigateToYesterday()">
+              <i class="fas fa-chevron-left"></i>
+              Yesterday
+            </button>
+            <input 
+              type="date" 
+              [value]="selectedDate"
+              (change)="onDateChange($event)"
+              class="date-picker">
+            <button class="quick-nav-btn" (click)="navigateToToday()">
+              Today
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="notes-actions">
+            <button 
+              class="btn btn-secondary"
+              (click)="saveNotes()"
+              [disabled]="isNotesLoading || notesSaved">
+              <i class="fas fa-save"></i>
+              Save Notes
+            </button>
+            <button 
+              class="btn btn-danger"
+              (click)="deleteNotes()"
+              [disabled]="isNotesLoading || !currentNoteContent.trim()">
+              <i class="fas fa-trash"></i>
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <div class="notes-editor">
+          <div class="editor-header">
+            <h3>Notes for {{ formatDate(selectedDate) }}</h3>
+            <span *ngIf="!notesSaved" class="unsaved-indicator">
+              <i class="fas fa-circle"></i>
+              Unsaved changes
+            </span>
+          </div>
+          
+          <div *ngIf="isNotesLoading" class="notes-loading">
+            <div class="spinner-small"></div>
+            Loading notes...
+          </div>
+
+          <textarea 
+            *ngIf="!isNotesLoading"
+            [(ngModel)]="currentNoteContent"
+            (input)="onNotesChange()"
+            placeholder="Start typing your notes for today..."
+            class="notes-textarea"
+            rows="15">
+          </textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Tab -->
+    <div *ngIf="activeTab === 'security'" class="tab-content">
+      <div class="security-section">
+        <div class="section-header">
+          <h2>Security Settings</h2>
+          <p>Manage your password and security preferences</p>
+        </div>
+
+        <!-- Change Password Form -->
+        <div class="security-card">
+          <h3>Change Password</h3>
+          <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="password-form">
+            <div class="form-group">
+              <label for="currentPassword">Current Password *</label>
+              <input 
+                type="password" 
+                id="currentPassword"
+                formControlName="currentPassword"
+                [class.error]="isFieldInvalid(passwordForm, 'currentPassword')"
+                placeholder="Enter your current password">
+              <div *ngIf="isFieldInvalid(passwordForm, 'currentPassword')" class="field-error">
+                {{ getFieldError(passwordForm, 'currentPassword') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="newPassword">New Password *</label>
+              <input 
+                type="password" 
+                id="newPassword"
+                formControlName="newPassword"
+                [class.error]="isFieldInvalid(passwordForm, 'newPassword')"
+                placeholder="Enter your new password">
+              <div *ngIf="isFieldInvalid(passwordForm, 'newPassword')" class="field-error">
+                {{ getFieldError(passwordForm, 'newPassword') }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Confirm New Password *</label>
+              <input 
+                type="password" 
+                id="confirmPassword"
+                formControlName="confirmPassword"
+                [class.error]="isFieldInvalid(passwordForm, 'confirmPassword') || passwordForm.errors?.['mismatch']"
+                placeholder="Confirm your new password">
+              <div *ngIf="isFieldInvalid(passwordForm, 'confirmPassword')" class="field-error">
+                {{ getFieldError(passwordForm, 'confirmPassword') }}
+              </div>
+              <div *ngIf="passwordForm.errors?.['mismatch'] && passwordForm.get('confirmPassword')?.touched" class="field-error">
+                Passwords do not match
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button 
+                type="submit" 
+                class="btn btn-primary"
+                [disabled]="passwordForm.invalid || isLoading">
+                <i class="fas fa-key"></i>
+                Change Password
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Password Reset -->
+        <div class="security-card">
+          <h3>Reset Password</h3>
+          <p>If you've forgotten your password, you can reset it using your email address.</p>
+          <button 
+            class="btn btn-secondary"
+            (click)="resetPassword()"
+            [disabled]="isLoading">
+            <i class="fas fa-envelope"></i>
+            Send Reset Link
+          </button>
+        </div>
+
+       

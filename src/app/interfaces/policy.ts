@@ -21,6 +21,7 @@ export interface PolicyCatalog {
 }
 
 export interface ClientPolicy {
+  clientName: string;
   policyId: string;
   clientId: string;
   policyName: string;
@@ -184,15 +185,14 @@ export interface CreatePolicyCatalogRequest {
 
 export interface CreateClientPolicyRequest {
   clientId: string;
-  policyName: string;
-  status?: string;
-  startDate: Date | string;
-  endDate: Date | string;
+  policyName: string;   // from catalog
+  status?: string;      // default: "Active"
+  startDate: Date;
+  endDate: Date;
   notes?: string;
-  policyCatalogId?: string;
-  typeId?: string;
-  companyId?: string;
+  policyCatalogId: string;
 }
+
 
 export interface CreatePolicyTemplateRequest {
   agentId: string;
@@ -693,3 +693,5 @@ export type PolicyFormControl<T> = {
 
 // Generic API response wrapper
 export type ApiResponse<T = any> = PolicyResponse<T>;
+
+
