@@ -136,7 +136,7 @@ export interface ClientSearchResponse {
   providedIn: 'root'
 })
 export class AppointmentsService {
-  private baseUrl = 'http://localhost:3000/api/appointments';
+  private baseUrl = 'https://aminius-backend.onrender.com/api/appointments';
 
   private appointmentsSubject = new BehaviorSubject<Appointment[]>([]);
   public appointments$ = this.appointmentsSubject.asObservable();

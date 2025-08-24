@@ -42,7 +42,7 @@ export interface MonthlyReport {
   providedIn: 'root'
 })
 export class AnalyticsService {
-  private baseUrl = 'http://localhost:3000/api/analytics'; // move to environment.ts for real project
+  private baseUrl = 'https://aminius-backend.onrender.com/api/analytics'; // move to environment.ts for real project
 
   constructor(private http: HttpClient) {}
 

@@ -16,7 +16,7 @@ import {
   DataIntegrityIssue
 } from '../interfaces/utility';
 
-const API_URL = 'http://localhost:3000/api/utility'; 
+const API_URL = 'https://aminius-backend.onrender.com/api/utility'; 
 
 @Injectable({
   providedIn: 'root'

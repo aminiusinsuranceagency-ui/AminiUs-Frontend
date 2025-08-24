@@ -15,7 +15,7 @@ import {
   ReminderStatistics
 } from '../interfaces/Reminder';
 
-const API_BASE = `http://localhost:3000/api/reminders`;
+const API_BASE = `https://aminius-backend.onrender.com/api/reminders`;
 
 @Injectable({
   providedIn: 'root'

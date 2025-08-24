@@ -28,7 +28,7 @@ export interface NavbarBadgeCounts {
   providedIn: 'root'
 })
 export class AgentService {
-  private baseUrl = 'http://localhost:3000/api'; 
+  private baseUrl = 'https://aminius-backend.onrender.com/api'; 
 
   constructor(private http: HttpClient) {
     console.log('AgentService initialized with baseUrl:', this.baseUrl);

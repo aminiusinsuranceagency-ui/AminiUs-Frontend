@@ -14,7 +14,7 @@ import {
   providedIn: 'root'
 })
 export class ClientsService {
-  private baseUrl = 'http://localhost:3000/api/clients';
+  private baseUrl = 'https://aminius-backend.onrender.com/api/clients';
 
 
   constructor(private http: HttpClient) {}
