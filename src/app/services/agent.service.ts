@@ -25,9 +25,10 @@ export interface NavbarBadgeCounts {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root'  
 })
 export class AgentService {
+                    
   private baseUrl = 'https://aminius-backend.onrender.com/api'; 
 
   constructor(private http: HttpClient) {
