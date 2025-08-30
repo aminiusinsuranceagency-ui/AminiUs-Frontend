@@ -82,7 +82,7 @@ export class AgentComponent  implements OnInit, OnDestroy {
     this.profileForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required, this.customEmailValidator]],
       phone: ['', [Validators.required, Validators.pattern(/^[\+]?[0-9\s\-\(\)]+$/)]],
       role: [''],
       companyName: [''],
@@ -101,7 +101,33 @@ export class AgentComponent  implements OnInit, OnDestroy {
     const confirmPassword = form.get('confirmPassword')?.value;
     return newPassword === confirmPassword ? null : { mismatch: true };
   }
-
+private customEmailValidator(control: any): { [key: string]: any } | null {
+  if (!control.value) {
+    return null; // Don't validate empty values here, let required validator handle it
+  }
+  
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  
+  if (!emailPattern.test(control.value)) {
+    return { 'email': true };
+  }
+  
+  // Additional checks
+  if (control.value.length > 100) {
+    return { 'email': true };
+  }
+  
+  // Check for consecutive dots
+  if (control.value.includes('..')) {
+    return { 'email': true };
+  }
+  
+  return null;
+}
+private isValidEmail(email: string): boolean {
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailPattern.test(email) && email.length <= 100 && !email.includes('..');
+}
   private loadUserProfile(): void {
     this.currentUser = this.sessionService.getCurrentUser();
     if (this.currentUser) {
