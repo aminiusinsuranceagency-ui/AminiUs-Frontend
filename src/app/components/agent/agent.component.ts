@@ -102,28 +102,25 @@ export class AgentComponent  implements OnInit, OnDestroy {
     return newPassword === confirmPassword ? null : { mismatch: true };
   }
 private customEmailValidator(control: any): { [key: string]: any } | null {
-  if (!control.value) {
-    return null; // Don't validate empty values here, let required validator handle it
-  }
-  
+  if (!control.value) return null;
+
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  
+
   if (!emailPattern.test(control.value)) {
-    return { 'email': true };
+    return { invalidEmail: true }; // 👈 custom key
   }
-  
-  // Additional checks
+
   if (control.value.length > 100) {
-    return { 'email': true };
+    return { invalidEmail: true };
   }
-  
-  // Check for consecutive dots
+
   if (control.value.includes('..')) {
-    return { 'email': true };
+    return { invalidEmail: true };
   }
-  
+
   return null;
 }
+
 private isValidEmail(email: string): boolean {
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return emailPattern.test(email) && email.length <= 100 && !email.includes('..');
@@ -495,7 +492,7 @@ private isValidEmail(email: string): boolean {
     const field = formGroup.get(fieldName);
     if (field && field.errors) {
       if (field.errors['required']) return `${fieldName} is required`;
-      if (field.errors['email']) return 'Please enter a valid email address';
+      if (field.errors['invalidEmail']) return 'Please enter a valid email address';
       if (field.errors['minlength']) return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
       if (field.errors['pattern']) return `Please enter a valid ${fieldName}`;
     }
