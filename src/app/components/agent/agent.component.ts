@@ -107,7 +107,7 @@ private customEmailValidator(control: any): { [key: string]: any } | null {
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   if (!emailPattern.test(control.value)) {
-    return { invalidEmail: true }; // 👈 custom key
+    return { invalidEmail: true }; 
   }
 
   if (control.value.length > 100) {

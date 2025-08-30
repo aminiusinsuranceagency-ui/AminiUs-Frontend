@@ -11,7 +11,7 @@ import { DailyNotesComponent } from './components/daily-notes/daily-notes.compon
 import { NotificationToastComponent } from './components/notification-toast/notification-toast.component';
 
 export const routes: Routes = [
-   { path: 'login', component: AuthComponent },
+   { path: 'logini', component: AuthComponent },
    { path: 'client', component: ClientsComponent },
    { path: 'Reminders', component: RemindersComponent },
    { path: 'dashboard', component: DashboardComponent },
