@@ -102,14 +102,18 @@ export class AgentComponent  implements OnInit, OnDestroy {
     return newPassword === confirmPassword ? null : { mismatch: true };
   }
 private customEmailValidator(control: any): { [key: string]: any } | null {
-  if (!control.value) return null;
+  if (!control.value) {
+    return null; // let required validator handle empty case
+  }
 
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
+  // Basic pattern check
   if (!emailPattern.test(control.value)) {
-    return { invalidEmail: true }; 
+    return { invalidEmail: true };
   }
 
+  // Additional checks
   if (control.value.length > 100) {
     return { invalidEmail: true };
   }
@@ -118,8 +122,9 @@ private customEmailValidator(control: any): { [key: string]: any } | null {
     return { invalidEmail: true };
   }
 
-  return null;
+  return null; // valid email
 }
+
 
 private isValidEmail(email: string): boolean {
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -488,17 +493,27 @@ private isValidEmail(email: string): boolean {
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 
-  getFieldError(formGroup: FormGroup, fieldName: string): string {
+ getFieldError(formGroup: FormGroup, fieldName: string): string {
   const field = formGroup.get(fieldName);
-  console.log("nothing to see here")
+
   if (field && field.errors) {
-    if (field.errors['required']) return `${fieldName} is required`;
-    if (field.errors['email'] || field.errors['invalidEmail']) return 'Please you have to enter a valid email address';
-    if (field.errors['minlength']) return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
-    if (field.errors['pattern']) return `Please enter a valid ${fieldName}`;
+    if (field.errors['required']) {
+      return `${fieldName} is required`;
+    }
+    if (field.errors['email'] || field.errors['invalidEmail']) {
+      return 'Please enter a valid email address';
+    }
+    if (field.errors['minlength']) {
+      return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
+    }
+    if (field.errors['pattern']) {
+      return `Please enter a valid ${fieldName}`;
+    }
   }
+
   return '';
 }
+
 
   // Avatar handling
   onAvatarChange(event: any): void {
