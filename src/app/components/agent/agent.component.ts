@@ -232,7 +232,7 @@ private isValidEmail(email: string): boolean {
       this.markFormGroupTouched(this.passwordForm);
       return;
     }
-
+ 
     this.showConfirmation({
       title: 'Change Password',
       message: 'Are you sure you want to change your password? You will need to use the new password for future logins.',
@@ -490,6 +490,7 @@ private isValidEmail(email: string): boolean {
 
   getFieldError(formGroup: FormGroup, fieldName: string): string {
   const field = formGroup.get(fieldName);
+  console.log("nothing to see here")
   if (field && field.errors) {
     if (field.errors['required']) return `${fieldName} is required`;
     if (field.errors['email'] || field.errors['invalidEmail']) return 'Please you have to enter a valid email address';
