@@ -492,7 +492,7 @@ private isValidEmail(email: string): boolean {
   const field = formGroup.get(fieldName);
   if (field && field.errors) {
     if (field.errors['required']) return `${fieldName} is required`;
-    if (field.errors['email'] || field.errors['invalidEmail']) return 'Please enter a valid email address';
+    if (field.errors['email'] || field.errors['invalidEmail']) return 'Please you have to enter a valid email address';
     if (field.errors['minlength']) return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
     if (field.errors['pattern']) return `Please enter a valid ${fieldName}`;
   }
