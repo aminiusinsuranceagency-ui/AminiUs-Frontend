@@ -97,21 +97,30 @@ export class AgentService {
       );
   }
 
-  // Registration
-  registerAgent(request: RegisterRequest): Observable<RegisterResponse> {
-    console.log('AgentService: Registering agent with email:', request.Email);
-    console.log('Registration request payload:', { 
-      ...request, 
-      PasswordHash: '[HIDDEN]' 
-    });
-    
-    return this.http.post<RegisterResponse>(`${this.baseUrl}/agent/register`, request)
-      .pipe(
-        tap(response => console.log('Register agent response:', response)),
-        catchError(this.handleError)
-      );
-  }
-
+// Registration method - fix the parameter mapping
+registerAgent(request: RegisterRequest): Observable<RegisterResponse> {
+  console.log('AgentService: Registering agent with email:', request.Email);
+  console.log('Registration request payload:', { 
+    ...request, 
+    PasswordHash: '[HIDDEN]' 
+  });
+  
+  // Transform PascalCase to the format expected by backend
+  const backendRequest = {
+    firstName: request.FirstName,      // Transform to lowercase
+    lastName: request.LastName,
+    email: request.Email,
+    phone: request.Phone,
+    passwordHash: request.PasswordHash,
+    avatar: request.Avatar || null
+  };
+  
+  return this.http.post<RegisterResponse>(`${this.baseUrl}/agent/register`, backendRequest)
+    .pipe(
+      tap(response => console.log('Register agent response:', response)),
+      catchError(this.handleError)
+    );
+}
   // Password Management
   changeAgentPassword(
     agentId: string, 
