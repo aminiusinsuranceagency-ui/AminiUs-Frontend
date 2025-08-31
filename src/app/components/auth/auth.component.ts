@@ -219,30 +219,17 @@ export class AuthComponent implements OnInit {
     }
   }
 
-  private async handleRegistration(): Promise<void> {
+ private async handleRegistration(): Promise<void> {
   const formData = this.authForm.value;
   console.log('Starting registration process', { email: formData.email });
 
-  let emailValidation: any;
-
-  // Validate email if utility service is available
-  if (this.utilityService) {
-    try {
-      emailValidation = await this.utilityService.validateEmail(formData.email);
-      console.log('Email validation result:', emailValidation);
-
-      // Allow either IsValid or isValid casing
-      if (!(emailValidation?.IsValid ?? emailValidation?.isValid)) {
-        this.showErrorMessage('Please enter a valid email address.');
-        return;
-      }
-    } catch (emailError) {
-      console.warn(
-        'Email validation service unavailable, proceeding with registration',
-        emailError
-      );
-    }
+  // Simple client-side validation (optional since Angular validator already handles it)
+  const email = formData.email.trim().toLowerCase();
+  if (!email || !this.isValidEmail(email)) {
+    this.showErrorMessage('Please enter a valid email address.');
+    return;
   }
+
 
   // Format phone number if utility service is available
   let formattedPhone = formData.phone;
@@ -256,126 +243,122 @@ export class AuthComponent implements OnInit {
   }
 
   // Hash the password
-  const passwordHash = await this.hashPassword(formData.password);
+   const passwordHash = await this.hashPassword(formData.password);
 
   const registerRequest: RegisterRequest = {
     FirstName: formData.firstName.trim(),
     LastName: formData.lastName.trim(),
-    Email: formData.email.trim().toLowerCase(),
-    Phone: formattedPhone,
+    Email: email,
+    Phone: formData.phone.trim(),
     PasswordHash: passwordHash,
     Avatar: ''
   };
 
+
+
   console.log('Sending registration request', registerRequest);
+ try {
+    const response = await this.agentService.registerAgent(registerRequest).toPromise();
+    console.log('Registration response:', response);
 
-  const response = await this.agentService.registerAgent(registerRequest).toPromise();
-  console.log('Registration response:', response);
+    if (response?.Success && response.AgentId) {
+      localStorage.setItem('aminusUserRegistered', 'true');
+      this.showWelcomeMessage(`Welcome to Aminius, ${formData.firstName}! Your account has been created successfully.`);
 
-  if (response?.Success && response.AgentId) {
-    localStorage.setItem('aminusUserRegistered', 'true');
-    this.showWelcomeMessage(`Welcome to Aminius, ${formData.firstName}! Your account has been created successfully.`);
-
-    setTimeout(() => {
-      this.isFirstTime = false;
-      this.resetForm();
-      this.authForm.patchValue({ email: formData.email });
-      this.updateFormValidation();
-    }, 2500);
-  } else {
-    this.showErrorMessage(response?.Message || 'Registration failed. Please try again.');
+      setTimeout(() => {
+        this.isFirstTime = false;
+        this.resetForm();
+        this.authForm.patchValue({ email: formData.email });
+        this.updateFormValidation();
+      }, 2500);
+    } else {
+      this.showErrorMessage(response?.Message || 'Registration failed. Please try again.');
+    }
+  } catch (registrationError: any) {
+    console.error('Registration request failed:', registrationError);
+    this.showErrorMessage(registrationError?.error?.Message || 'Registration failed. Please try again.');
   }
 }
-
-  private async handleLogin(): Promise<void> {
-    const formData = this.authForm.value;
-    console.log('Starting login process', { email: formData.email });
-    
-    try {
-      const passwordHash = await this.hashPassword(formData.password);
-
-      const loginRequest: LoginRequest = {
-        Email: formData.email.trim().toLowerCase(),
-        Password: passwordHash
-      };
-
-      console.log('Sending login request', { email: loginRequest.Email });
-
-      const response = await this.agentService.loginAgent(loginRequest).toPromise();
-      console.log('Login response:', response);
-
-      if (response?.Success && response.AgentId && response.AgentProfile) {
-        try {
-         let agentProfile: AgentProfile;
-
-if (typeof response.AgentProfile === 'string') {
-  agentProfile = JSON.parse(response.AgentProfile) as AgentProfile;
-} else {
-  agentProfile = response.AgentProfile as AgentProfile;
+private isValidEmail(email: string): boolean {
+  const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailPattern.test(email) && email.length <= 100;
 }
+  private async handleLogin(): Promise<void> {
+  const formData = this.authForm.value;
+  console.log('Starting login process', { email: formData.email });
+  
+  try {
+    const passwordHash = await this.hashPassword(formData.password);
 
-          // Create session data
-          const sessionData = {
-            user: agentProfile,
-            token: response.Token || '',
-            loginTime: new Date().toISOString(),
-            rememberMe: formData.rememberMe,
-            agentId: response.AgentId
-          };
-          
-          // Store session
-          this.sessionService.setSession(sessionData);
-          console.log('Session created successfully');
-          
-          // Get personalized greeting if utility service is available
-          let greeting = 'Welcome back';
-          if (this.utilityService) {
-            try {
-              const greetingResponse = await this.utilityService.getGreeting();
-              greeting = greetingResponse?.Greeting || greeting;
-            } catch (greetingError) {
-              console.warn('Greeting service unavailable, using default greeting', greetingError);
-            }
-          }
-          
-          this.showWelcomeMessage(
-            `${greeting}, ${agentProfile.FirstName}! Welcome back to your dashboard.`
-          );
-          
-          // Navigate to dashboard after showing welcome message
-          setTimeout(() => {
-            this.router.navigate(['/dashboard']);
-          }, 2000);
-          
-        } catch (parseError) {
-          console.error('Error parsing agent profile:', parseError);
-          this.showErrorMessage('Login successful but profile data is invalid. Please contact support.');
+    const loginRequest: LoginRequest = {
+      Email: formData.email.trim().toLowerCase(),
+      Password: passwordHash
+    };
+
+    console.log('Sending login request', { email: loginRequest.Email });
+
+    const response = await this.agentService.loginAgent(loginRequest).toPromise();
+    console.log('Login response:', response);
+
+    if (response?.Success && response.AgentId && response.AgentProfile) {
+      try {
+        let agentProfile: AgentProfile;
+
+        if (typeof response.AgentProfile === 'string') {
+          agentProfile = JSON.parse(response.AgentProfile) as AgentProfile;
+        } else {
+          agentProfile = response.AgentProfile as AgentProfile;
         }
+
+        // Create session data
+        const sessionData = {
+          user: agentProfile,
+          token: response.Token || '',
+          loginTime: new Date().toISOString(),
+          rememberMe: formData.rememberMe,
+          agentId: response.AgentId
+        };
         
-      } else {
-        const errorMessage = response?.Message || 'Invalid email or password. Please try again.';
-        console.error('Login failed:', errorMessage);
-        this.showErrorMessage(errorMessage);
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      let errorMessage = 'Login failed. Please try again.';
-      
-      if (error.error?.Message) {
-        errorMessage = error.error.Message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      } else if (error.status === 0) {
-        errorMessage = 'Unable to connect to server. Please check your connection.';
-      } else if (error.status === 401) {
-        errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.status === 404) {
-        errorMessage = 'Account not found. Please check your email or create a new account.';
+        // Store session
+        this.sessionService.setSession(sessionData);
+        console.log('Session created successfully');
+        
+        this.showWelcomeMessage(`Welcome back, ${agentProfile.FirstName}! Welcome back to your dashboard.`);
+        
+        // Navigate to dashboard after showing welcome message
+        setTimeout(() => {
+          this.router.navigate(['/dashboard']);
+        }, 2000);
+        
+      } catch (parseError) {
+        console.error('Error parsing agent profile:', parseError);
+        this.showErrorMessage('Login successful but profile data is invalid. Please contact support.');
       }
       
+    } else {
+      const errorMessage = response?.Message || 'Invalid email or password. Please try again.';
+      console.error('Login failed:', errorMessage);
       this.showErrorMessage(errorMessage);
     }
+  } catch (error: any) {
+    console.error('Login error:', error);
+    let errorMessage = 'Login failed. Please try again.';
+    
+    if (error.error?.Message) {
+      errorMessage = error.error.Message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    } else if (error.status === 0) {
+      errorMessage = 'Unable to connect to server. Please check your connection.';
+    } else if (error.status === 401) {
+      errorMessage = 'Invalid email or password. Please try again.';
+    } else if (error.status === 404) {
+      errorMessage = 'Account not found. Please check your email or create a new account.';
+    }
+    
+    this.showErrorMessage(errorMessage);
   }
+}
 
   private async hashPassword(password: string): Promise<string> {
     // Simple hash for demo - in production, use proper password hashing
