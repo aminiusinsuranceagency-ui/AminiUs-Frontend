@@ -106,24 +106,34 @@ private customEmailValidator(control: any): { [key: string]: any } | null {
     return null; // let required validator handle empty case
   }
 
-  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const email = control.value.trim(); // Remove whitespace
+  console.log('Validating email:', email); // Debug log
+
+  // More permissive email pattern
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // Basic pattern check
-  if (!emailPattern.test(control.value)) {
+  if (!emailPattern.test(email)) {
+    console.log('Email failed pattern test:', email);
     return { invalidEmail: true };
   }
 
-  // Additional checks
-  if (control.value.length > 100) {
+  // Length check
+  if (email.length > 100) {
+    console.log('Email too long:', email.length);
     return { invalidEmail: true };
   }
 
-  if (control.value.includes('..')) {
+  // Consecutive dots check
+  if (email.includes('..')) {
+    console.log('Email has consecutive dots');
     return { invalidEmail: true };
   }
 
+  console.log('Email validation passed:', email);
   return null; // valid email
 }
+
 
 
 private isValidEmail(email: string): boolean {
@@ -278,7 +288,7 @@ private isValidEmail(email: string): boolean {
       }
     });
   }
-
+ 
   resetPassword(): void {
     if (!this.currentUser?.Email) {
       this.errorMessage = 'Unable to reset password: no email found';
