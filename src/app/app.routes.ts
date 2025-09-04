@@ -8,7 +8,7 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { AppointmentsComponent } from './components/appointments/appointments.component';
 import { PoliciesComponent } from './components/policies/policies.component';
 import { DailyNotesComponent } from './components/daily-notes/daily-notes.component';
-import { NotificationToastComponent } from './components/notification-toast/notification-toast.component';
+import { AgentComponent } from './components/agent/agent.component';
 
 export const routes: Routes = [
    { path: 'login', component: AuthComponent },
@@ -20,7 +20,7 @@ export const routes: Routes = [
    { path: 'policies', component: PoliciesComponent },
    { path: 'notes', component: DailyNotesComponent },
    { path: '', component: DashboardComponent },
-    { path: 'toast',component:NotificationToastComponent}
+    { path: 'agentProfile',component:AgentComponent}
 
 
 
