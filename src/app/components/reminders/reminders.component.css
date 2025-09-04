@@ -979,3 +979,62 @@
 .gap-2 {
   gap: 1rem;
 }
+/* Add this to your reminders.component.css to fix toast issues */
+
+/* Update the form section to allow toasts to show above */
+.form-section {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  /* Add pointer-events to allow clicks outside modal */
+  pointer-events: auto;
+}
+
+/* Make sure the modal card doesn't block pointer events globally */
+.form-card {
+  background: var(--white);
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: modalSlideIn 0.3s ease-out;
+  /* Ensure this doesn't interfere with global interactions */
+  pointer-events: auto;
+  position: relative;
+  z-index: 1001;
+}
+
+/* CRITICAL: Ensure toasts appear above everything */
+::ng-deep .toast-container,
+::ng-deep app-toast-container,
+::ng-deep .toast-wrapper {
+  z-index: 1100 !important;
+  position: fixed !important;
+  pointer-events: none !important;
+}
+
+/* Allow toast content to be clickable */
+::ng-deep .toast-container .toast,
+::ng-deep .toast-container .toast-content,
+::ng-deep .toast-container button {
+  pointer-events: auto !important;
+}
+
+/* Alternative: If you're using Angular Material or similar */
+::ng-deep .cdk-overlay-container {
+  z-index: 1100 !important;
+}
+
+::ng-deep .mat-snack-bar-container {
+  z-index: 1100 !important;
+}
