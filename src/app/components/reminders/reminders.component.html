@@ -60,158 +60,6 @@
     </div>
   </div>
 
-  <!-- Add/Edit Reminder Form -->
-  <div class="form-section" *ngIf="showAddForm">
-    <div class="form-card">
-      <div class="form-header">
-        <h3>
-          <i class="fas fa-plus-circle" *ngIf="!isEditing"></i>
-          <i class="fas fa-edit" *ngIf="isEditing"></i>
-          {{ isEditing ? 'Edit Reminder' : 'Add New Reminder' }}
-        </h3>
-        <button class="btn-close" (click)="hideAddForm()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <form [formGroup]="reminderForm" (ngSubmit)="submitReminder()">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="reminderType">
-              <i class="fas fa-tag"></i>
-              Reminder Type *
-            </label>
-            <select id="reminderType" formControlName="ReminderType" class="form-control">
-              <option *ngFor="let type of reminderTypes" [value]="type.value">
-                {{ type.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="priority">
-              <i class="fas fa-flag"></i>
-              Priority
-            </label>
-            <select id="priority" formControlName="Priority" class="form-control">
-              <option *ngFor="let priority of priorities" [value]="priority.value">
-                {{ priority.label }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="title">
-            <i class="fas fa-heading"></i>
-            Title *
-          </label>
-          <input 
-            type="text" 
-            id="title" 
-            formControlName="Title" 
-            class="form-control"
-            placeholder="Enter reminder title"
-            required
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="client">
-            <i class="fas fa-user"></i>
-            Client (Optional)
-          </label>
-          <select id="client" formControlName="ClientId" class="form-control">
-            <option value="">Select a client...</option>
-            <option *ngFor="let client of clients" [value]="client.clientId">
-              {{ client.firstName }} {{ client.lastName }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="reminderDate">
-              <i class="fas fa-calendar"></i>
-              Date *
-            </label>
-            <input 
-              type="date" 
-              id="reminderDate" 
-              formControlName="ReminderDate" 
-              class="form-control"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="reminderTime">
-              <i class="fas fa-clock"></i>
-              Time
-            </label>
-            <input 
-              type="time" 
-              id="reminderTime" 
-              formControlName="ReminderTime" 
-              class="form-control"
-            >
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="description">
-            <i class="fas fa-align-left"></i>
-            Description
-          </label>
-          <textarea 
-            id="description" 
-            formControlName="Description" 
-            class="form-control"
-            rows="3"
-            placeholder="Enter reminder description..."
-          ></textarea>
-        </div>
-
-        <div class="notification-options">
-          <h4><i class="fas fa-bell"></i> Notification Options</h4>
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="EnableSMS">
-              <span class="checkmark"></span>
-              <i class="fas fa-sms"></i> SMS
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="EnableWhatsApp">
-              <span class="checkmark"></span>
-              <i class="fab fa-whatsapp"></i> WhatsApp
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="EnablePushNotification">
-              <span class="checkmark"></span>
-              <i class="fas fa-mobile-alt"></i> Push Notification
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="AutoSend">
-              <span class="checkmark"></span>
-              <i class="fas fa-paper-plane"></i> Auto Send
-            </label>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" (click)="hideAddForm()">
-            <i class="fas fa-times"></i>
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary" [disabled]="reminderForm.invalid">
-            <i class="fas fa-save"></i>
-            {{ isEditing ? 'Update' : 'Create' }} Reminder
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- Filters and Search -->
   <div class="filters-section">
     <div class="search-filter-row">
@@ -430,5 +278,157 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- MOVED: Add/Edit Reminder Form - NOW OUTSIDE THE MAIN CONTAINER -->
+<div class="form-section" *ngIf="showAddForm">
+  <div class="form-card">
+    <div class="form-header">
+      <h3>
+        <i class="fas fa-plus-circle" *ngIf="!isEditing"></i>
+        <i class="fas fa-edit" *ngIf="isEditing"></i>
+        {{ isEditing ? 'Edit Reminder' : 'Add New Reminder' }}
+      </h3>
+      <button class="btn-close" (click)="hideAddForm()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="reminderForm" (ngSubmit)="submitReminder()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="reminderType">
+            <i class="fas fa-tag"></i>
+            Reminder Type *
+          </label>
+          <select id="reminderType" formControlName="ReminderType" class="form-control">
+            <option *ngFor="let type of reminderTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="priority">
+            <i class="fas fa-flag"></i>
+            Priority
+          </label>
+          <select id="priority" formControlName="Priority" class="form-control">
+            <option *ngFor="let priority of priorities" [value]="priority.value">
+              {{ priority.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="title">
+          <i class="fas fa-heading"></i>
+          Title *
+        </label>
+        <input 
+          type="text" 
+          id="title" 
+          formControlName="Title" 
+          class="form-control"
+          placeholder="Enter reminder title"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="client">
+          <i class="fas fa-user"></i>
+          Client (Optional)
+        </label>
+        <select id="client" formControlName="ClientId" class="form-control">
+          <option value="">Select a client...</option>
+          <option *ngFor="let client of clients" [value]="client.clientId">
+            {{ client.firstName }} {{ client.lastName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="reminderDate">
+            <i class="fas fa-calendar"></i>
+            Date *
+          </label>
+          <input 
+            type="date" 
+            id="reminderDate" 
+            formControlName="ReminderDate" 
+            class="form-control"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="reminderTime">
+            <i class="fas fa-clock"></i>
+            Time
+          </label>
+          <input 
+            type="time" 
+            id="reminderTime" 
+            formControlName="ReminderTime" 
+            class="form-control"
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">
+          <i class="fas fa-align-left"></i>
+          Description
+        </label>
+        <textarea 
+          id="description" 
+          formControlName="Description" 
+          class="form-control"
+          rows="3"
+          placeholder="Enter reminder description..."
+        ></textarea>
+      </div>
+
+      <div class="notification-options">
+        <h4><i class="fas fa-bell"></i> Notification Options</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="EnableSMS">
+            <span class="checkmark"></span>
+            <i class="fas fa-sms"></i> SMS
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="EnableWhatsApp">
+            <span class="checkmark"></span>
+            <i class="fab fa-whatsapp"></i> WhatsApp
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="EnablePushNotification">
+            <span class="checkmark"></span>
+            <i class="fas fa-mobile-alt"></i> Push Notification
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="AutoSend">
+            <span class="checkmark"></span>
+            <i class="fas fa-paper-plane"></i> Auto Send
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="hideAddForm()">
+          <i class="fas fa-times"></i>
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="reminderForm.invalid">
+          <i class="fas fa-save"></i>
+          {{ isEditing ? 'Update' : 'Create' }} Reminder
+        </button>
+      </div>
+    </form>
   </div>
 </div>
