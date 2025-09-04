@@ -795,20 +795,70 @@ updateAppointmentStatus(appointmentId: string, status: Appointment['status']): v
 private formatAppointmentTime(appointment: Appointment): string {
   if (!appointment.startTime && !appointment.endTime) return '';
 
-  const opts: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC'   // ✅ force UTC instead of browser local
+  const formatTimeString = (timeStr: string): string => {
+    if (!timeStr) return '';
+    
+    try {
+      // Handle different time formats that might come from the database
+      let cleanTime = timeStr.toString().trim();
+      
+      // If it's already in HH:MM format, use it directly
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(cleanTime)) {
+        const [hours, minutes] = cleanTime.split(':');
+        const hour24 = parseInt(hours, 10);
+        const min = parseInt(minutes, 10);
+        
+        // Create a date object just for formatting
+        const tempDate = new Date();
+        tempDate.setHours(hour24, min, 0, 0);
+        
+        // Format to 12-hour time
+        return tempDate.toLocaleTimeString([], { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+      
+      // If it's a 4-digit number like "0900"
+      if (/^\d{4}$/.test(cleanTime)) {
+        const hours = parseInt(cleanTime.substring(0, 2), 10);
+        const minutes = parseInt(cleanTime.substring(2, 4), 10);
+        
+        const tempDate = new Date();
+        tempDate.setHours(hours, minutes, 0, 0);
+        
+        return tempDate.toLocaleTimeString([], { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+      
+      // If it's a full datetime string, extract time portion
+      if (timeStr.includes('T') || timeStr.includes(' ')) {
+        const date = new Date(timeStr);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleTimeString([], { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          });
+        }
+      }
+      
+      // Fallback: return original string if we can't parse it
+      return timeStr;
+      
+    } catch (error) {
+      console.warn('Error formatting time:', timeStr, error);
+      return timeStr;
+    }
   };
 
-  const startDate = appointment.startTime ? new Date(appointment.startTime) : null;
-  const endDate = appointment.endTime ? new Date(appointment.endTime) : null;
-
-  const startStr = startDate ? startDate.toLocaleTimeString(undefined, opts) : '';
-  const endStr = endDate ? endDate.toLocaleTimeString(undefined, opts) : '';
+  const startStr = appointment.startTime ? formatTimeString(appointment.startTime) : '';
+  const endStr = appointment.endTime ? formatTimeString(appointment.endTime) : '';
 
   return [startStr, endStr].filter(Boolean).join(' – ');
-}
+}}
 
-}
