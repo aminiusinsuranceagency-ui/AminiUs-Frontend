@@ -392,12 +392,13 @@
   }
 }
 
-/* Dark Mode Support (Optional) */
+/* Dark Mode Support - Bright Theme Adaptation */
 @media (prefers-color-scheme: dark) {
   .toast {
     background: #1a202c;
     border-color: #2d3748;
     color: #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 
   .toast-title {
@@ -430,27 +431,30 @@
 
   .toast-btn-secondary:hover {
     background: #4a5568;
+    border-color: var(--bright-red);
   }
 }
 
-/* High Contrast Mode Support */
-@media (prefers-contrast: high) {
-  .toast {
-    border-width: 2px;
-  }
+/* Focus Styles for Accessibility - Bright Theme */
+.toast-close:focus {
+  outline: 3px solid var(--bright-red);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--pure-white), 0 0 0 5px var(--bright-red);
+}
 
-  .toast-btn {
-    border-width: 2px;
-    border-style: solid;
-  }
+.toast-btn:focus {
+  outline: 3px solid var(--bright-blue);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--pure-white), 0 0 0 5px var(--bright-blue);
+}
 
-  .toast-btn-primary {
-    border-color: var(--primary-red);
-  }
+/* Enhanced Hover Effects for Bright Theme */
+.toast-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+}
 
-  .toast-btn-secondary {
-    border-color: var(--dark-gray);
-  }
+.toast:hover {
+  box-shadow: var(--shadow-bright), 0 8px 30px rgba(229, 62, 62, 0.1);
 }
 
 /* Reduced Motion Support */
@@ -474,17 +478,10 @@
   .toast-btn:hover {
     transform: none;
   }
-}
 
-/* Focus Styles for Accessibility */
-.toast-close:focus {
-  outline: 2px solid var(--primary-red);
-  outline-offset: 2px;
-}
-
-.toast-btn:focus {
-  outline: 2px solid var(--primary-red);
-  outline-offset: 2px;
+  .toast:hover {
+    transform: none;
+  }
 }
 
 /* Print Styles */
@@ -492,4 +489,35 @@
   .toast-container {
     display: none;
   }
+}
+
+/* Additional Bright Theme Enhancements */
+.toast-container.show .toast {
+  backdrop-filter: blur(20px);
+}
+
+.toast-reminder {
+  position: relative;
+}
+
+.toast-reminder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bright-red), var(--secondary-red), var(--bright-red));
+  border-radius: 16px 16px 0 0;
+}
+
+.toast-confirm::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bright-blue), var(--info-blue), var(--bright-blue));
+  border-radius: 16px 16px 0 0;
 }
