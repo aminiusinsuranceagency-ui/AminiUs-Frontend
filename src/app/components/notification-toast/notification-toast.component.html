@@ -1,36 +1,54 @@
-<div class="toast-overlay" *ngIf="toast">
-  <div class="toast-card" [ngClass]="toast.type" [@slideIn]>
+<div *ngIf="toast" 
+     [ngClass]="getContainerClasses()"
+     (mouseenter)="onMouseEnter()"
+     (mouseleave)="onMouseLeave()"
+     (keydown)="onKeyDown($event)"
+     tabindex="0"
+     role="alert"
+     [attr.aria-live]="toast.type === 'error' ? 'assertive' : 'polite'">
+
+  <div [ngClass]="getToastClasses()" 
+       [@slideIn]="!toast.center"
+       [@centerFade]="toast.center">
     
-    <!-- Header -->
+    <!-- Toast Icon & Header -->
     <div class="toast-header">
-      <i class="fas"
-        [ngClass]="{
-          'fa-check-circle': toast.type === 'success',
-          'fa-exclamation-triangle': toast.type === 'warning',
-          'fa-times-circle': toast.type === 'error',
-          'fa-info-circle': toast.type === 'info',
-          'fa-bell': toast.type === 'reminder'
-        }">
-      </i>
-      <h3>{{ toast.title }}</h3>
-      <button class="toast-close" (click)="onClose()">
+      <div class="toast-icon-wrapper">
+        <i class="fas {{ getIconClass() }}" [ngClass]="'icon-' + toast.type"></i>
+      </div>
+      
+      <div class="toast-content">
+        <h4 class="toast-title" *ngIf="toast.title">{{ toast.title }}</h4>
+        <p class="toast-message">{{ toast.message }}</p>
+      </div>
+      
+      <button *ngIf="shouldShowCloseButton()" 
+              class="toast-close-btn"
+              (click)="onClose()"
+              type="button"
+              aria-label="Close notification">
         <i class="fas fa-times"></i>
       </button>
     </div>
 
-    <!-- Body -->
-    <div class="toast-body">
-      <p>{{ toast.message }}</p>
-    </div>
-
-    <!-- Actions -->
-    <div class="toast-actions" *ngIf="toast.actions?.length">
+    <!-- Toast Actions -->
+    <div class="toast-actions" *ngIf="toast.actions && toast.actions.length > 0">
       <button *ngFor="let action of toast.actions"
+              [ngClass]="getButtonClass(action)"
               (click)="onAction(action)"
-              [ngClass]="['toast-btn', action.style || 'primary']">
+              type="button">
         {{ action.label }}
       </button>
     </div>
+    
+    <!-- Progress Bar for timed toasts -->
+    <div *ngIf="showProgress && toast.duration" 
+         class="toast-progress-bar"
+         [style.animation-duration]="toast.duration + 'ms'">
+    </div>
+
+    <!-- Decorative Elements for Different Types -->
+    <div class="toast-decoration" [ngClass]="'decoration-' + toast.type"></div>
     
   </div>
 </div>
