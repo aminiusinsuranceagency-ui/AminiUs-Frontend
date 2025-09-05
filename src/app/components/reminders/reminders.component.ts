@@ -68,7 +68,7 @@ export class RemindersComponent implements OnInit {
     { value: 'Completed', label: 'Completed', class: 'badge-secondary' },
     { value: 'Cancelled', label: 'Cancelled', class: 'badge-danger' }
   ];
-  Math: any;
+  Math = Math;
 
   constructor(
     private fb: FormBuilder,
