@@ -392,49 +392,6 @@
   }
 }
 
-/* Dark Mode Support - Bright Theme Adaptation */
-@media (prefers-color-scheme: dark) {
-  .toast {
-    background: #1a202c;
-    border-color: #2d3748;
-    color: #e2e8f0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  }
-
-  .toast-title {
-    color: #e2e8f0;
-  }
-
-  .toast-message {
-    color: #a0aec0;
-  }
-
-  .toast-close {
-    color: #a0aec0;
-  }
-
-  .toast-close:hover {
-    background: #2d3748;
-    color: #e2e8f0;
-  }
-
-  .toast-actions {
-    background: rgba(26, 32, 44, 0.5);
-    border-color: #2d3748;
-  }
-
-  .toast-btn-secondary {
-    background: #2d3748;
-    color: #e2e8f0;
-    border-color: #4a5568;
-  }
-
-  .toast-btn-secondary:hover {
-    background: #4a5568;
-    border-color: var(--bright-red);
-  }
-}
-
 /* Focus Styles for Accessibility - Bright Theme */
 .toast-close:focus {
   outline: 3px solid var(--bright-red);
