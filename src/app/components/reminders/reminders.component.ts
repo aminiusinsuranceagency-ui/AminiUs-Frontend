@@ -245,7 +245,7 @@ export class RemindersComponent implements OnInit {
             type: 'reminder',
             title: 'Today\'s Reminders',
             message: `You have ${todaysReminders.length} reminder${todaysReminders.length > 1 ? 's' : ''} due today!`,
-            duration: 8000,
+            duration: 5000,
             actions: [
               {
                 label: 'View',
