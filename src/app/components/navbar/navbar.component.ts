@@ -555,13 +555,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
 }
 
   goToProfile(): void {
-    this.router.navigate(['/profile']);
+    this.router.navigate(['/agent']);
     this.isProfileDropdownOpen = false;
     this.onNavbarInteraction();
   }
 
   goToSettings(): void {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['/agent']);
     this.isProfileDropdownOpen = false;
     this.onNavbarInteraction();
   }
