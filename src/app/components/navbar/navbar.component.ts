@@ -554,17 +554,17 @@ export class NavbarComponent implements OnInit, OnDestroy {
     });
 }
 
-  goToProfile(): void {
-    this.router.navigate(['/agent']);
-    this.isProfileDropdownOpen = false;
-    this.onNavbarInteraction();
-  }
+goToProfile(): void {
+  this.router.navigate(['/agentProfile']); 
+  this.isProfileDropdownOpen = false;
+  this.onNavbarInteraction();
+}
 
-  goToSettings(): void {
-    this.router.navigate(['/agent']);
-    this.isProfileDropdownOpen = false;
-    this.onNavbarInteraction();
-  }
+goToSettings(): void {
+  this.router.navigate(['/agentProfile']); 
+  this.isProfileDropdownOpen = false;
+  this.onNavbarInteraction();
+}
 
   getUserInitials(): string {
     if (!this.currentUser?.name) return 'U';
