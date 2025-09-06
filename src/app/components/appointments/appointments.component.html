@@ -1,6 +1,5 @@
 <!-- Appointments Component -->
 <div class="appointments-container">
-  <!-- <app-navbar></app-navbar> -->
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-state">
     <div class="spinner"></div>
@@ -149,12 +148,28 @@
                  [style.background-color]="getStatusColor(appointment.status)">
               {{ appointment.status }}
             </div>
-            <div class="dropdown">
-              <button class="btn btn-icon" data-toggle="dropdown">
+            
+            <!-- Fixed Reminder Button -->
+            <button class="reminder-btn" 
+                    [class.active]="appointment.reminderSet"
+                    (click)="toggleReminder(appointment)"
+                    [disabled]="creatingReminder"
+                    title="{{ appointment.reminderSet ? 'Reminder Set' : 'Set Reminder' }}">
+              <i class="fas" 
+                 [class.fa-bell]="appointment.reminderSet"
+                 [class.fa-bell-slash]="!appointment.reminderSet"
+                 [class.fa-spinner]="creatingReminder"
+                 [class.fa-spin]="creatingReminder"></i>
+              {{ appointment.reminderSet ? 'Reminder Set' : 'Set Reminder' }}
+            </button>
+            
+            <!-- Fixed Dropdown -->
+            <div class="dropdown" [class.active]="activeDropdown === appointment.appointmentId">
+              <button class="btn-icon" (click)="toggleDropdown(appointment.appointmentId, $event)">
                 <i class="fas fa-ellipsis-v"></i>
               </button>
               <div class="dropdown-menu">
-                <a (click)="openAppointmentModal(appointment)">
+                <a (click)="openAppointmentModal(appointment); closeDropdown()">
                   <i class="fas fa-edit"></i> Edit
                 </a>
                 <a (click)="updateAppointmentStatus(appointment.appointmentId, 'Completed')"
@@ -173,97 +188,95 @@
           </div>
         </div>
         
-  <div class="appointment-details">
-  <!-- Appointment Date -->
-  <div class="detail-item">
-    <i class="fas fa-calendar"></i>
-    <span>{{ appointment.appointmentDate | date:'fullDate' }}</span>
-  </div>
+        <div class="appointment-details">
+          <!-- Appointment Date -->
+          <div class="detail-item">
+            <i class="fas fa-calendar"></i>
+            <span>{{ appointment.appointmentDate | date:'fullDate' }}</span>
+          </div>
 
-  <!-- Appointment Time (formatted) -->
-  <div class="detail-item" *ngIf="appointment.formattedTime">
-    <i class="fas fa-clock"></i>
-    <span>{{ appointment.formattedTime }}</span>
-  </div>
+          <!-- Appointment Time (formatted) -->
+          <div class="detail-item" *ngIf="appointment.formattedTime">
+            <i class="fas fa-clock"></i>
+            <span>{{ appointment.formattedTime }}</span>
+          </div>
 
-  <!-- Location -->
-  <div class="detail-item" *ngIf="appointment.location">
-    <i class="fas fa-map-marker-alt"></i>
-    <span>{{ appointment.location }}</span>
-  </div>
+          <!-- Location -->
+          <div class="detail-item" *ngIf="appointment.location">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>{{ appointment.location }}</span>
+          </div>
 
-  <!-- Type -->
-  <div class="detail-item">
-    <i class="fas" [class]="getAppointmentTypeIcon(appointment.type)"></i>
-    <span>{{ appointment.type }}</span>
-  </div>
+          <!-- Type -->
+          <div class="detail-item">
+            <i class="fas" [class]="getAppointmentTypeIcon(appointment.type)"></i>
+            <span>{{ appointment.type }}</span>
+          </div>
 
-  <!-- Priority -->
-  <div class="detail-item">
-    <i class="fas fa-flag" [style.color]="getPriorityColor(appointment.priority)"></i>
-    <span>{{ appointment.priority }} Priority</span>
-  </div>
-</div>
+          <!-- Priority -->
+          <div class="detail-item">
+            <i class="fas fa-flag" [style.color]="getPriorityColor(appointment.priority)"></i>
+            <span>{{ appointment.priority }} Priority</span>
+          </div>
+        </div>
 
-<!-- Description -->
-<div *ngIf="appointment.description" class="appointment-description">
-  {{ appointment.description }}
-</div>
+        <!-- Description -->
+        <div *ngIf="appointment.description" class="appointment-description">
+          {{ appointment.description }}
+        </div>
 
-<!-- Footer -->
-<div class="appointment-footer">
-  <!-- Client Phone -->
-  <div class="contact-info" *ngIf="appointment.clientPhone">
-    <i class="fas fa-phone"></i>
-    <span>{{ appointment.clientPhone }}</span>
-  </div>
+        <!-- Footer -->
+        <div class="appointment-footer">
+          <!-- Client Phone -->
+          <div class="contact-info" *ngIf="appointment.clientPhone">
+            <i class="fas fa-phone"></i>
+            <span>{{ appointment.clientPhone }}</span>
+          </div>
 
-  <!-- Reminder Status -->
-  <div class="reminder-status" *ngIf="appointment.reminderSet">
-    <i class="fas fa-bell"></i>
-    <span>Reminder Set</span>
-  </div>
-</div>
-
+          <!-- Reminder Status -->
+          <div class="reminder-status" *ngIf="appointment.reminderSet">
+            <i class="fas fa-bell"></i>
+            <span>Reminder Set</span>
+          </div>
+        </div>
       </div>
     </div>
 
-   <!-- Week View -->
-<div *ngIf="viewMode === 'week'" class="week-view">
-  <div class="week-header">
-    <h3>Week of {{ weekViewDays[0]?.date | date:'mediumDate' }}</h3>
-  </div>
-  
-  <div class="week-grid">
-    <div *ngFor="let day of weekViewDays" class="week-day" [class.today]="day.isToday">
-      <div class="day-header">
-        <div class="day-name">{{ day.dayName }}</div>
-        <div class="day-date">{{ day.date | date:'d' }}</div>
+    <!-- Week View -->
+    <div *ngIf="viewMode === 'week'" class="week-view">
+      <div class="week-header">
+        <h3>Week of {{ weekViewDays[0]?.date | date:'mediumDate' }}</h3>
       </div>
       
-      <div class="day-appointments">
-        <div *ngIf="day.appointments.length === 0" class="no-appointments">
-          No appointments
-        </div>
-        
-        <div *ngFor="let appointment of day.appointments" 
-             class="week-appointment"
-             [style.border-left-color]="getStatusColor(appointment.status)">
-          <div class="appointment-time">
-            {{ appointment.formattedTime || (appointment.startTime + ' – ' + appointment.endTime) }}
+      <div class="week-grid">
+        <div *ngFor="let day of weekViewDays" class="week-day" [class.today]="day.isToday">
+          <div class="day-header">
+            <div class="day-name">{{ day.dayName }}</div>
+            <div class="day-date">{{ day.date | date:'d' }}</div>
           </div>
-          <div class="appointment-title">{{ appointment.title }}</div>
-          <div class="appointment-client">{{ appointment.clientName }}</div>
-          <div class="appointment-type">
-            <i class="fas" [class]="getAppointmentTypeIcon(appointment.type)"></i>
-            {{ appointment.type }}
+          
+          <div class="day-appointments">
+            <div *ngIf="day.appointments.length === 0" class="no-appointments">
+              No appointments
+            </div>
+            
+            <div *ngFor="let appointment of day.appointments" 
+                 class="week-appointment"
+                 [style.border-left-color]="getStatusColor(appointment.status)">
+              <div class="appointment-time">
+                {{ appointment.formattedTime || (appointment.startTime + ' – ' + appointment.endTime) }}
+              </div>
+              <div class="appointment-title">{{ appointment.title }}</div>
+              <div class="appointment-client">{{ appointment.clientName }}</div>
+              <div class="appointment-type">
+                <i class="fas" [class]="getAppointmentTypeIcon(appointment.type)"></i>
+                {{ appointment.type }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-
 
     <!-- Calendar View -->
     <div *ngIf="viewMode === 'calendar'" class="calendar-view">
@@ -311,239 +324,240 @@
           </div>
         </div>
       </div>
+
       <!-- Selected Date Details -->
-<div *ngIf="selectedDate" class="selected-date-details">
-  <h4>{{ selectedDate | date:'fullDate' }}</h4>
+      <div *ngIf="selectedDate" class="selected-date-details">
+        <h4>{{ selectedDate | date:'fullDate' }}</h4>
 
-  <div class="selected-appointments">
-    <div *ngIf="!hasAppointmentsForSelectedDate()">
-      No appointments on this date.
-    </div>
+        <div class="selected-appointments">
+          <div *ngIf="!hasAppointmentsForSelectedDate()">
+            No appointments on this date.
+          </div>
 
-    <div *ngFor="let appointment of getAppointmentsForSelectedDate()" class="selected-appointment">
-      <div class="appointment-time">{{ appointment.formattedTime }}</div>
-      <div class="appointment-info">
-        <div class="appointment-title">{{ appointment.title }}</div>
-        <div class="appointment-client">{{ appointment.clientName }}</div>
-      </div>
-      <div class="appointment-status" [style.background-color]="getStatusColor(appointment.status)">
-        {{ appointment.status }}
+          <div *ngFor="let appointment of getAppointmentsForSelectedDate()" class="selected-appointment">
+            <div class="appointment-time">{{ appointment.formattedTime }}</div>
+            <div class="appointment-info">
+              <div class="appointment-title">{{ appointment.title }}</div>
+              <div class="appointment-client">{{ appointment.clientName }}</div>
+            </div>
+            <div class="appointment-status" [style.background-color]="getStatusColor(appointment.status)">
+              {{ appointment.status }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
-</div>
 
-<!-- Appointment Modal -->
-<!-- Appointment Modal -->
-<div *ngIf="showAppointmentModal" class="modal-overlay" (click)="closeAppointmentModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>
-        <i class="fas fa-calendar-plus"></i>
-        {{ isEditMode ? 'Edit Appointment' : 'New Appointment' }}
-      </h3>
-      <button class="close-btn" (click)="closeAppointmentModal()" [disabled]="saving">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    
-    <div class="modal-body">
-      <!-- Saving State -->
-      <div *ngIf="saving" class="saving-state">
-        <div class="spinner"></div>
-        <p>{{ isEditMode ? 'Updating' : 'Creating' }} appointment...</p>
+  <!-- Appointment Modal -->
+  <div *ngIf="showAppointmentModal" class="modal-overlay" (click)="closeAppointmentModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-calendar-plus"></i>
+          {{ isEditMode ? 'Edit Appointment' : 'New Appointment' }}
+        </h3>
+        <button class="close-btn" (click)="closeAppointmentModal()" [disabled]="saving">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
+      
+      <div class="modal-body">
+        <!-- Saving State -->
+        <div *ngIf="saving" class="saving-state">
+          <div class="spinner"></div>
+          <p>{{ isEditMode ? 'Updating' : 'Creating' }} appointment...</p>
+        </div>
 
-      <form class="appointment-form" *ngIf="!saving">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Title *</label>
-            <input type="text" 
-                   [(ngModel)]="appointmentForm.title" 
-                   name="title"
-                   placeholder="Appointment title"
-                   required>
-          </div>
-          
-          <div class="form-group client-search-group">
-            <label>Client Name *</label>
-            <div class="client-search-container">
+        <form class="appointment-form" *ngIf="!saving">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Title *</label>
               <input type="text" 
-                     [(ngModel)]="clientSearchTerm"
-                     name="clientName"
-                     placeholder="Start typing client name..."
-                     (input)="onClientNameInput($event)"
-                     (focus)="onClientNameFocus()"
-                     (blur)="onClientNameBlur()"
-                     [class.has-selection]="selectedClient"
+                     [(ngModel)]="appointmentForm.title" 
+                     name="title"
+                     placeholder="Appointment title"
                      required>
-              
-              <!-- Search loading indicator -->
-              <div class="search-loading" *ngIf="searchingClients">
-                <i class="fas fa-spinner fa-spin"></i>
-              </div>
-              
-              <!-- Selected client indicator -->
-              <div class="selected-client-indicator" *ngIf="selectedClient">
-                <i class="fas fa-check-circle text-success"></i>
-              </div>
-              
-              <!-- Autocomplete dropdown -->
-              <div class="client-dropdown" *ngIf="showClientDropdown && clientSearchResults.length > 0">
-                <div class="client-dropdown-item" 
-                     *ngFor="let client of clientSearchResults" 
-                     (click)="selectClient(client)">
-                  <div class="client-info">
-                    <div class="client-name">{{ client.FullName }}</div>
-                    <div class="client-details">
-                      <span class="client-phone">{{ client.PhoneNumber }}</span>
-                      <span class="client-email" *ngIf="client.Email">{{ client.Email }}</span>
-                    </div>
-                  </div>
-                  <i class="fas fa-user-circle client-icon"></i>
-                </div>
-              </div>
-              
-              <!-- No results message -->
-              <div class="client-dropdown no-results" *ngIf="showClientDropdown && clientSearchResults.length === 0 && clientSearchTerm.length >= 2 && !searchingClients">
-                <div class="no-results-text">
-                  <i class="fas fa-search"></i>
-                  No clients found for "{{ clientSearchTerm }}"
-                </div>
-              </div>
             </div>
             
-            <!-- Client validation message -->
-            <div class="validation-message" *ngIf="clientSearchTerm && !selectedClient && clientSearchTerm.length >= 2">
-              <i class="fas fa-exclamation-triangle"></i>
-              Please select a client from the dropdown
+            <div class="form-group client-search-group">
+              <label>Client Name *</label>
+              <div class="client-search-container">
+                <input type="text" 
+                       [(ngModel)]="clientSearchTerm"
+                       name="clientName"
+                       placeholder="Start typing client name..."
+                       (input)="onClientNameInput($event)"
+                       (focus)="onClientNameFocus()"
+                       (blur)="onClientNameBlur()"
+                       [class.has-selection]="selectedClient"
+                       required>
+                
+                <!-- Search loading indicator -->
+                <div class="search-loading" *ngIf="searchingClients">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                
+                <!-- Selected client indicator -->
+                <div class="selected-client-indicator" *ngIf="selectedClient">
+                  <i class="fas fa-check-circle text-success"></i>
+                </div>
+                
+                <!-- Autocomplete dropdown -->
+                <div class="client-dropdown" *ngIf="showClientDropdown && clientSearchResults.length > 0">
+                  <div class="client-dropdown-item" 
+                       *ngFor="let client of clientSearchResults" 
+                       (click)="selectClient(client)">
+                    <div class="client-info">
+                      <div class="client-name">{{ client.FullName }}</div>
+                      <div class="client-details">
+                        <span class="client-phone">{{ client.PhoneNumber }}</span>
+                        <span class="client-email" *ngIf="client.Email">{{ client.Email }}</span>
+                      </div>
+                    </div>
+                    <i class="fas fa-user-circle client-icon"></i>
+                  </div>
+                </div>
+                
+                <!-- No results message -->
+                <div class="client-dropdown no-results" *ngIf="showClientDropdown && clientSearchResults.length === 0 && clientSearchTerm.length >= 2 && !searchingClients">
+                  <div class="no-results-text">
+                    <i class="fas fa-search"></i>
+                    No clients found for "{{ clientSearchTerm }}"
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Client validation message -->
+              <div class="validation-message" *ngIf="clientSearchTerm && !selectedClient && clientSearchTerm.length >= 2">
+                <i class="fas fa-exclamation-triangle"></i>
+                Please select a client from the dropdown
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Date *</label>
-            <input type="date" 
-                   [(ngModel)]="appointmentForm.appointmentDate"
-                   name="appointmentDate"
-                   required>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date *</label>
+              <input type="date" 
+                     [(ngModel)]="appointmentForm.appointmentDate"
+                     name="appointmentDate"
+                     required>
+            </div>
+            
+            <div class="form-group">
+              <label>Start Time *</label>
+              <input type="time" 
+                     [(ngModel)]="appointmentForm.startTime"
+                     name="startTime"
+                     required>
+            </div>
+            
+            <div class="form-group">
+              <label>End Time *</label>
+              <input type="time" 
+                     [(ngModel)]="appointmentForm.endTime"
+                     name="endTime"
+                     required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Type *</label>
+              <select [(ngModel)]="appointmentForm.type" name="type" required>
+                <option value="">Select Type</option>
+                <option value="Call">Call</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Site Visit">Site Visit</option>
+                <option value="Policy Review">Policy Review</option>
+                <option value="Claim Processing">Claim Processing</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Priority</label>
+              <select [(ngModel)]="appointmentForm.priority" name="priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="appointmentForm.status" name="status">
+                <option value="Scheduled">Scheduled</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="Rescheduled">Rescheduled</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client Phone</label>
+              <input type="tel" 
+                     [(ngModel)]="appointmentForm.clientPhone"
+                     name="clientPhone"
+                     placeholder="+254 xxx xxx xxx"
+                     [readonly]="selectedClient">
+            </div>
+            
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" 
+                     [(ngModel)]="appointmentForm.location"
+                     name="location"
+                     placeholder="Meeting location">
+            </div>
           </div>
           
           <div class="form-group">
-            <label>Start Time *</label>
-            <input type="time" 
-                   [(ngModel)]="appointmentForm.startTime"
-                   name="startTime"
-                   required>
+            <label>Description</label>
+            <textarea [(ngModel)]="appointmentForm.description"
+                      name="description"
+                      placeholder="Appointment details..."
+                      rows="3"></textarea>
           </div>
           
           <div class="form-group">
-            <label>End Time *</label>
-            <input type="time" 
-                   [(ngModel)]="appointmentForm.endTime"
-                   name="endTime"
-                   required>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Type *</label>
-            <select [(ngModel)]="appointmentForm.type" name="type" required>
-              <option value="">Select Type</option>
-              <option value="Call">Call</option>
-              <option value="Meeting">Meeting</option>
-              <option value="Site Visit">Site Visit</option>
-              <option value="Policy Review">Policy Review</option>
-              <option value="Claim Processing">Claim Processing</option>
-            </select>
+            <label>Notes</label>
+            <textarea [(ngModel)]="appointmentForm.notes"
+                      name="notes"
+                      placeholder="Additional notes..."
+                      rows="2"></textarea>
           </div>
           
-          <div class="form-group">
-            <label>Priority</label>
-            <select [(ngModel)]="appointmentForm.priority" name="priority">
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-            </select>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" 
+                     [(ngModel)]="appointmentForm.reminderSet"
+                     name="reminderSet">
+              <span class="checkbox-custom"></span>
+              Set reminder for this appointment
+            </label>
           </div>
-          
-          <div class="form-group">
-            <label>Status</label>
-            <select [(ngModel)]="appointmentForm.status" name="status">
-              <option value="Scheduled">Scheduled</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Rescheduled">Rescheduled</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Client Phone</label>
-            <input type="tel" 
-                   [(ngModel)]="appointmentForm.clientPhone"
-                   name="clientPhone"
-                   placeholder="+254 xxx xxx xxx"
-                   [readonly]="selectedClient">
-          </div>
-          
-          <div class="form-group">
-            <label>Location</label>
-            <input type="text" 
-                   [(ngModel)]="appointmentForm.location"
-                   name="location"
-                   placeholder="Meeting location">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Description</label>
-          <textarea [(ngModel)]="appointmentForm.description"
-                    name="description"
-                    placeholder="Appointment details..."
-                    rows="3"></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label>Notes</label>
-          <textarea [(ngModel)]="appointmentForm.notes"
-                    name="notes"
-                    placeholder="Additional notes..."
-                    rows="2"></textarea>
-        </div>
-        
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" 
-                   [(ngModel)]="appointmentForm.reminderSet"
-                   name="reminderSet">
-            <span class="checkbox-custom"></span>
-            Set reminder for this appointment
-          </label>
-        </div>
-      </form>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" 
-              (click)="closeAppointmentModal()" 
-              [disabled]="saving">
-        Cancel
-      </button>
-      <button class="btn btn-primary" 
-              (click)="saveAppointment()" 
-          
-              [disabled]="saving || !appointmentForm.title || !appointmentForm.clientName || !appointmentForm.clientId || !appointmentForm.appointmentDate || !appointmentForm.startTime || !appointmentForm.endTime || !appointmentForm.type">
-        <i class="fas fa-spinner fa-spin" *ngIf="saving"></i>
-        <i class="fas fa-save" *ngIf="!saving"></i>
-        {{ isEditMode ? 'Update' : 'Create' }} Appointment
-      </button>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" 
+                (click)="closeAppointmentModal()" 
+                [disabled]="saving">
+          Cancel
+        </button>
+        <button class="btn btn-primary" 
+                (click)="saveAppointment()" 
+                [disabled]="saving || !appointmentForm.title || !appointmentForm.clientName || !appointmentForm.clientId || !appointmentForm.appointmentDate || !appointmentForm.startTime || !appointmentForm.endTime || !appointmentForm.type">
+          <i class="fas fa-spinner fa-spin" *ngIf="saving"></i>
+          <i class="fas fa-save" *ngIf="!saving"></i>
+          {{ isEditMode ? 'Update' : 'Create' }} Appointment
+        </button>
+      </div>
     </div>
   </div>
 </div>

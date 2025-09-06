@@ -126,11 +126,12 @@ export class AppointmentsComponent implements OnInit {
     });
 
     // Close dropdown when clicking outside
-    document.addEventListener('click', (event) => {
-      if (!event.target || !(event.target as Element).closest('.dropdown')) {
-        this.activeDropdown = null;
-      }
-    });
+     document.addEventListener('click', (event) => {
+    const target = event.target as Element;
+    if (!target.closest('.dropdown')) {
+      this.activeDropdown = null;
+    }
+  });
   }
 
   ngOnInit(): void {
@@ -153,14 +154,57 @@ export class AppointmentsComponent implements OnInit {
   }
 
   // Dropdown methods
-  toggleDropdown(appointmentId: string, event: Event): void {
-    event.stopPropagation();
-    this.activeDropdown = this.activeDropdown === appointmentId ? null : appointmentId;
-  }
-
-  closeDropdown(): void {
+ toggleDropdown(appointmentId: string, event: Event): void {
+  event.stopPropagation();
+  // Close all other dropdowns and toggle current one
+  if (this.activeDropdown === appointmentId) {
     this.activeDropdown = null;
+  } else {
+    this.activeDropdown = appointmentId;
   }
+}
+
+closeDropdown(): void {
+  this.activeDropdown = null;
+}
+toggleReminder(appointment: Appointment): void {
+  if (!this.agentId || this.creatingReminder) return;
+
+  if (appointment.reminderSet) {
+    // If reminder is already set, show confirmation and remove it
+    this.toastService.confirm('Remove reminder for this appointment?', ['Yes', 'No'])
+      .subscribe((action) => {
+        if (action === 'yes') {
+          this.removeReminder(appointment);
+        }
+      });
+  } else {
+    // Create new reminder
+    this.createReminder(appointment);
+  }
+}
+private removeReminder(appointment: Appointment): void {
+  this.creatingReminder = true;
+  
+  // Update local state immediately for better UX
+  const originalState = appointment.reminderSet;
+  appointment.reminderSet = false;
+
+  // Here you would call your backend to remove the reminder
+  // For now, we'll just simulate the API call
+  setTimeout(() => {
+    this.toastService.show({
+      type: 'success',
+      title: 'Reminder Removed',
+      message: 'Appointment reminder has been removed.',
+      duration: 3000
+    });
+    this.creatingReminder = false;
+  }, 500);
+
+  // If backend call fails, revert the state:
+  // appointment.reminderSet = originalState;
+}
 
   // Client search methods
   searchClients(query: string): Observable<ClientSearchResult[]> {
@@ -253,7 +297,10 @@ async createReminder(appointment: Appointment): Promise<void> {
   if (!this.agentId) return;
 
   this.creatingReminder = true;
-  this.closeDropdown();
+
+  // Update local state immediately for better UX
+  const originalState = appointment.reminderSet;
+  appointment.reminderSet = true;
 
   try {
     const appointmentDate = new Date(appointment.appointmentDate);
@@ -281,8 +328,6 @@ async createReminder(appointment: Appointment): Promise<void> {
 
     await this.remindersService.createReminder(this.agentId, reminderRequest).toPromise();
 
-    this.updateAppointmentReminderStatus(appointment.appointmentId!, true);
-
     this.toastService.show({
       type: 'success',
       title: 'Reminder Created',
@@ -292,6 +337,9 @@ async createReminder(appointment: Appointment): Promise<void> {
 
   } catch (error) {
     console.error('Error creating reminder:', error);
+    
+    // Revert the local state if API call failed
+    appointment.reminderSet = originalState;
 
     this.toastService.show({
       type: 'error',
@@ -303,6 +351,7 @@ async createReminder(appointment: Appointment): Promise<void> {
     this.creatingReminder = false;
   }
 }
+
 
 
 
