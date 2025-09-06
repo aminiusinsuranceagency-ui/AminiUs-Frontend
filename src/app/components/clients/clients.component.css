@@ -1034,6 +1034,10 @@
   .clients-container {
     padding: 0.5rem;
     padding-top: calc(0.5rem + 60px);
+    /* Ensure no horizontal overflow */
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 
   .page-title {
@@ -1042,6 +1046,31 @@
 
   .page-subtitle {
     font-size: 0.9rem;
+  }
+  
+  /* Make cards stack properly on very small screens */
+  .client-card {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Ensure form doesn't overflow */
+  .clients-container .modal-content {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    margin: 0.5rem;
+  }
+  
+  /* Stack header buttons on very small screens */
+  .header-right {
+    width: 100%;
+  }
+  
+  .header-right .btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 
