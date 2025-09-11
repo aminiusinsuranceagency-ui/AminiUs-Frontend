@@ -1102,3 +1102,476 @@
     gap: 0.5rem;
   }
 }
+/* CRITICAL MODAL FIXES - Add these to your clients.component.css */
+
+/* Fix 1: Ensure modal overlays have proper specificity and !important rules */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10000 !important;
+  padding: 1rem !important;
+  overflow-y: auto !important;
+}
+
+.modal-content {
+  background: white !important;
+  border-radius: 12px !important;
+  max-width: 600px !important;
+  width: 100% !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  position: relative !important;
+  margin: auto !important;
+}
+
+.view-modal {
+  max-width: 700px !important;
+}
+
+.modal-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 1.5rem 2rem !important;
+  border-bottom: 1px solid var(--border-gray) !important;
+  background: white !important;
+  border-radius: 12px 12px 0 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1 !important;
+}
+
+.modal-header h2 {
+  margin: 0 !important;
+  color: var(--dark-gray) !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+}
+
+.btn-close {
+  background: none !important;
+  border: none !important;
+  font-size: 1.5rem !important;
+  cursor: pointer !important;
+  color: var(--medium-gray) !important;
+  padding: 0.5rem !important;
+  border-radius: 4px !important;
+  transition: all 0.2s !important;
+}
+
+.btn-close:hover {
+  background-color: var(--light-gray) !important;
+  color: var(--dark-gray) !important;
+}
+
+/* Fix 2: Form styling with proper specificity */
+.client-form {
+  padding: 2rem !important;
+  background: white !important;
+}
+
+.form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  gap: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1 !important;
+}
+
+.form-group label {
+  font-weight: 600 !important;
+  color: var(--dark-gray) !important;
+  font-size: 0.95rem !important;
+}
+
+.form-control {
+  padding: 0.75rem !important;
+  border: 2px solid var(--border-gray) !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  transition: border-color 0.2s !important;
+  background: white !important;
+  font-family: inherit !important;
+}
+
+.form-control:focus {
+  outline: none !important;
+  border-color: var(--primary-red) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+
+.form-control:disabled {
+  background: #f9fafb !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+.error-message {
+  color: var(--primary-red) !important;
+  font-size: 0.875rem !important;
+  margin-top: 0.25rem !important;
+}
+
+.form-error {
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 1rem !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 6px !important;
+  color: var(--primary-red) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Fix 3: Checkbox styling */
+.checkbox-group {
+  flex-direction: row !important;
+  align-items: center !important;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+  font-weight: normal !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+/* Fix 4: Form actions */
+.form-actions {
+  display: flex !important;
+  gap: 1rem !important;
+  justify-content: flex-end !important;
+  padding-top: 1.5rem !important;
+  border-top: 1px solid var(--border-gray) !important;
+  margin-top: 1rem !important;
+}
+
+/* Fix 5: Button styling */
+.btn {
+  padding: 0.75rem 1.5rem !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  text-decoration: none !important;
+}
+
+.btn-primary {
+  background: var(--primary-red) !important;
+  color: white !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--secondary-red) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-secondary {
+  background: var(--light-gray) !important;
+  color: var(--dark-gray) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--border-gray) !important;
+}
+
+.btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Fix 6: View modal specific styles */
+.client-profile {
+  padding: 2rem !important;
+}
+
+.profile-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  padding-bottom: 1.5rem !important;
+  border-bottom: 1px solid var(--border-gray) !important;
+}
+
+.profile-avatar {
+  width: 80px !important;
+  height: 80px !important;
+  background: var(--primary-red) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 1.5rem !important;
+}
+
+.profile-info h3 {
+  margin: 0 0 0.5rem 0 !important;
+  color: var(--dark-gray) !important;
+  font-size: 1.5rem !important;
+}
+
+.detail-section {
+  margin-bottom: 2rem !important;
+}
+
+.detail-section h4 {
+  color: var(--dark-gray) !important;
+  margin: 0 0 1rem 0 !important;
+  font-size: 1.1rem !important;
+  padding-bottom: 0.5rem !important;
+  border-bottom: 2px solid var(--primary-red) !important;
+  display: inline-block !important;
+}
+
+.detail-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+  gap: 1rem !important;
+}
+
+.detail-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+}
+
+.detail-item label {
+  font-weight: 600 !important;
+  color: var(--medium-gray) !important;
+  font-size: 0.875rem !important;
+}
+
+.detail-item span {
+  color: var(--dark-gray) !important;
+}
+
+.policy-card {
+  background: var(--light-gray) !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+}
+
+.policy-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 1rem !important;
+}
+
+.policy-header h5 {
+  margin: 0 !important;
+  color: var(--dark-gray) !important;
+}
+
+.policy-status {
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 20px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+}
+
+.policy-status.active {
+  background: rgba(56, 161, 105, 0.1) !important;
+  color: var(--success-green) !important;
+}
+
+.policy-status.inactive,
+.policy-status.expired,
+.policy-status.lapsed {
+  background: var(--light-red) !important;
+  color: var(--primary-red) !important;
+}
+
+.policy-details {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap: 1rem !important;
+}
+
+.policy-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+}
+
+.policy-item label {
+  font-weight: 600 !important;
+  color: var(--medium-gray) !important;
+  font-size: 0.875rem !important;
+}
+
+.policy-item span {
+  color: var(--dark-gray) !important;
+}
+
+.notes-content {
+  background: var(--light-gray) !important;
+  padding: 1rem !important;
+  border-radius: 8px !important;
+  margin: 0 !important;
+  color: var(--dark-gray) !important;
+  line-height: 1.5 !important;
+}
+
+.profile-actions {
+  display: flex !important;
+  gap: 1rem !important;
+  padding-top: 1.5rem !important;
+  border-top: 1px solid var(--border-gray) !important;
+}
+
+/* Fix 7: Status badges */
+.status-badge {
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 20px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+}
+
+.status-badge.client {
+  background: rgba(56, 161, 105, 0.1) !important;
+  color: var(--success-green) !important;
+}
+
+.status-badge.prospect {
+  background: rgba(221, 107, 32, 0.1) !important;
+  color: var(--warning-orange) !important;
+}
+
+.status-badge.large {
+  padding: 0.5rem 1rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Fix 8: Mobile responsiveness */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0.5rem !important;
+  }
+  
+  .modal-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .form-actions {
+    flex-direction: column !important;
+  }
+  
+  .modal-header {
+    padding: 1rem !important;
+  }
+  
+  .client-form {
+    padding: 1rem !important;
+  }
+  
+  .profile-header {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .policy-details {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .profile-actions {
+    flex-direction: column !important;
+  }
+}
+
+/* Fix 9: Ensure modals work in Angular ViewEncapsulation.None */
+:host {
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 1rem;
+  }
+}
+
+/* Fix 10: Override any Bootstrap or other framework conflicts */
+.modal-overlay .modal-content {
+  position: static !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 600px !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.modal-overlay .modal-content .modal-header {
+  position: relative !important;
+  padding: 1.5rem 2rem !important;
+  border-bottom: 1px solid var(--border-gray) !important;
+}
+
+.modal-overlay .modal-content .modal-body {
+  padding: 0 !important;
+}
+
+/* Fix 11: Ensure proper font inheritance */
+.modal-overlay * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Fix 12: Handle any z-index conflicts with navbar */
+.modal-overlay {
+  z-index: 9999 !important;
+}
+
+/* If you have a navbar with z-index 1000 or higher, use this: */
+.modal-overlay {
+  z-index: 10001 !important;
+}
