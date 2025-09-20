@@ -1,6 +1,4 @@
 <div class="clients-container">
-  <!-- <app-navbar></app-navbar> -->
-  
   <!-- Loading Overlay -->
   <div class="loading-overlay" *ngIf="loading">
     <div class="loading-spinner">
@@ -24,9 +22,9 @@
       <div class="header-left">
         <h1 class="page-title">
           <i class="fas fa-users"></i>
-          Clients & Prospects
+          Contact Management
         </h1>
-        <p class="page-subtitle">Manage your client relationships effectively</p>
+        <p class="page-subtitle">Manage your clients, prospects, and external policies</p>
       </div>
       <div class="header-right">
         <button class="btn btn-secondary" (click)="refreshData()" [disabled]="loading" title="Refresh Data">
@@ -35,50 +33,142 @@
         </button>
         <button class="btn btn-primary" (click)="openAddModal()">
           <i class="fas fa-plus"></i>
-          Add New Client
+          Add New {{ activeTab === 'clients' ? 'Client' : 'Prospect' }}
         </button>
       </div>
     </div>
-    
-    <!-- Stats Cards -->
-    <div class="stats-grid">
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'clients'"
+      (click)="switchTab('clients')">
+      <i class="fas fa-user-check"></i>
+      <span>Clients</span>
+      <span class="tab-count">{{ getTabCount('clients') }}</span>
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'prospects'"
+      (click)="switchTab('prospects')">
+      <i class="fas fa-user-plus"></i>
+      <span>Prospects</span>
+      <span class="tab-count">{{ getTabCount('prospects') }}</span>
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'prospects_with_policies'"
+      (click)="switchTab('prospects_with_policies')">
+      <i class="fas fa-shield-alt"></i>
+      <span>Prospects with Policies</span>
+      <span class="tab-count">{{ getTabCount('prospects_with_policies') }}</span>
+    </button>
+  </div>
+
+  <!-- Tab Statistics -->
+  <div class="tab-stats" [ngSwitch]="activeTab">
+    <!-- Clients Stats -->
+    <div *ngSwitchCase="'clients'" class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon clients">
-          <i class="fas fa-user-check"></i>
+          <i class="fas fa-users"></i>
         </div>
         <div class="stat-content">
-          <h3>{{ getClientCount() }}</h3>
-          <p>Active Clients</p>
+          <h3>{{ tabStatistics.clients.total }}</h3>
+          <p>Total Clients</p>
         </div>
       </div>
+      <div class="stat-card">
+        <div class="stat-icon policies">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.clients.activePolicies }}</h3>
+          <p>Active Policies</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon expiring">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.clients.expiringPolicies }}</h3>
+          <p>Expiring Soon</p>
+        </div>
+      </div>
+      <div class="stat-card" *ngIf="birthdays.length > 0">
+        <div class="stat-icon birthdays">
+          <i class="fas fa-birthday-cake"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ birthdays.length }}</h3>
+          <p>Birthdays Today</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prospects Stats -->
+    <div *ngSwitchCase="'prospects'" class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon prospects">
           <i class="fas fa-user-plus"></i>
         </div>
         <div class="stat-content">
-          <h3>{{ getProspectCount() }}</h3>
-          <p>Prospects</p>
+          <h3>{{ tabStatistics.prospects.total }}</h3>
+          <p>Total Prospects</p>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon total">
-          <i class="fas fa-users"></i>
+        <div class="stat-icon new">
+          <i class="fas fa-clock"></i>
         </div>
         <div class="stat-content">
-          <h3>{{ getTotalCount() }}</h3>
-          <p>Total Contacts</p>
+          <h3>{{ tabStatistics.prospects.newThisWeek }}</h3>
+          <p>Added This Week</p>
         </div>
       </div>
-<div class="stat-card" *ngIf="(statistics?.TodayBirthdays || 0) > 0">
-  <div class="stat-icon birthdays">
-    <i class="fas fa-birthday-cake"></i>
-  </div>
-  <div class="stat-content">
-    <h3>{{ statistics?.TodayBirthdays }}</h3>
-    <p>Birthdays Today</p>
-  </div>
-</div>
+    </div>
 
+    <!-- Prospects with Policies Stats -->
+    <div *ngSwitchCase="'prospects_with_policies'" class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon prospects-policies">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.prospectsWithPolicies.total }}</h3>
+          <p>With Policies</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon urgent">
+          <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.prospectsWithPolicies.expiringIn7Days }}</h3>
+          <p>Expiring in 7 Days</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.prospectsWithPolicies.expiringIn30Days }}</h3>
+          <p>Expiring in 30 Days</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon expired">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ tabStatistics.prospectsWithPolicies.expired }}</h3>
+          <p>Already Expired</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -89,82 +179,108 @@
         <i class="fas fa-search"></i>
         <input 
           type="text" 
-          placeholder="Search clients by name, phone, or email..." 
+          placeholder="Search by name, phone, or email..." 
           [(ngModel)]="searchTerm" 
           (input)="onSearch()"
           class="search-input"
           [disabled]="loading">
       </div>
     </div>
-    
-    <div class="filter-group">
-      <select [(ngModel)]="filterType" (change)="onFilterChange()" class="filter-select" [disabled]="loading">
-        <option value="all">All Contacts</option>
-        <option value="clients">Clients Only</option>
-        <option value="prospects">Prospects Only</option>
-      </select>
-    </div>
   </div>
 
-  <!-- Clients Grid -->
-  <div class="clients-grid" *ngIf="filteredClients.length > 0 && !loading">
-    <div class="client-card" *ngFor="let client of filteredClients; trackBy: trackByClientId">
-      <div class="client-header">
-        <div class="client-avatar">
-          <span>{{ client.firstName[0] }}{{ client.surname[0] }}</span>
+  <!-- Contacts Grid -->
+  <div class="contacts-grid" *ngIf="filteredContacts.length > 0 && !loading">
+    <div class="contact-card" *ngFor="let contact of filteredContacts; trackBy: trackByContactId">
+      <div class="contact-header">
+        <div class="contact-avatar">
+          <span>{{ contact.firstName[0] }}{{ contact.surname[0] || contact.lastName[0] }}</span>
         </div>
-        <div class="client-info">
-          <h3 class="client-name">{{ client.firstName }} {{ client.surname }} {{ client.lastName }}</h3>
-          <div class="client-status">
-            <span class="status-badge" [ngClass]="{'client': client.isClient, 'prospect': !client.isClient}">
-              {{ client.isClient ? 'Client' : 'Prospect' }}
+        <div class="contact-info">
+          <h3 class="contact-name">{{ getDisplayName(contact) }}</h3>
+          <div class="contact-status">
+            <span class="status-badge" [ngClass]="contact.type">
+              {{ contact.type === 'client' ? 'Client' : 'Prospect' }}
             </span>
-            <span class="insurance-type">{{ client.insuranceType }}</span>
+            <span class="insurance-type" *ngIf="contact.insuranceType">{{ contact.insuranceType }}</span>
+            <span class="has-policies" *ngIf="contact.hasExternalPolicies">
+              <i class="fas fa-shield-alt"></i> Has Policies
+            </span>
           </div>
         </div>
-        <div class="client-actions">
-          <button class="btn-icon" (click)="openViewModal(client)" title="View Details">
+        <div class="contact-actions">
+          <button class="btn-icon" (click)="openViewModal(contact)" title="View Details">
             <i class="fas fa-eye"></i>
           </button>
-          <button class="btn-icon" (click)="openEditModal(client)" title="Edit">
+          <button class="btn-icon" (click)="openEditModal(contact)" title="Edit">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="btn-icon delete" (click)="deleteClient(client.id)" title="Delete">
+          <button class="btn-icon" *ngIf="activeTab === 'prospects_with_policies'" 
+                  (click)="openAddPolicyModal(contact)" title="Add Policy">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button class="btn-icon delete" (click)="deleteContact(contact)" title="Delete">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>
       
-      <div class="client-details">
-        <div class="detail-row">
+      <div class="contact-details">
+        <div class="detail-row" *ngIf="contact.phoneNumber">
           <i class="fas fa-phone"></i>
-          <span>{{ client.phoneNumber }}</span>
+          <span>{{ contact.phoneNumber }}</span>
         </div>
-        <div class="detail-row">
+        <div class="detail-row" *ngIf="contact.email">
           <i class="fas fa-envelope"></i>
-          <span>{{ client.email }}</span>
+          <span>{{ contact.email }}</span>
         </div>
-        <div class="detail-row">
+        <div class="detail-row" *ngIf="contact.address">
           <i class="fas fa-map-marker-alt"></i>
-          <span>{{ client.address }}</span>
+          <span>{{ contact.address }}</span>
         </div>
-        <div class="detail-row" *ngIf="client.policy">
-          <i class="fas fa-shield-alt"></i>
-          <span>{{ client.policy.name }} - {{ client.policy.status }}</span>
+      </div>
+
+      <!-- Policy Information for Prospects with Policies -->
+      <div class="contact-policies" *ngIf="contact.policies && contact.policies.length > 0">
+        <h4>External Policies</h4>
+        <div class="policy-list">
+          <div class="policy-item" *ngFor="let policy of contact.policies">
+            <div class="policy-header">
+              <span class="policy-company">{{ policy.companyName }}</span>
+              <span class="policy-status" [ngClass]="policy.status.toLowerCase()">
+                {{ policy.status }}
+              </span>
+            </div>
+            <div class="policy-details">
+              <span class="policy-type">{{ policy.type }}</span>
+              <span class="policy-expiry" *ngIf="policy.expiryDate">
+                Expires: {{ formatDate(policy.expiryDate) }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div class="client-footer" *ngIf="!client.isClient">
-        <button class="btn btn-sm btn-secondary" (click)="convertToClient(client)">
-          <i class="fas fa-user-check"></i>
-          Convert to Client
-        </button>
+      <div class="contact-footer">
+        <div class="footer-actions">
+          <button class="btn btn-sm btn-secondary" 
+                  *ngIf="contact.type === 'prospect'" 
+                  (click)="convertProspectToClient(contact)">
+            <i class="fas fa-user-check"></i>
+            Convert to Client
+          </button>
+          <button class="btn btn-sm btn-outline" 
+                  *ngIf="activeTab === 'prospects' && !contact.hasExternalPolicies"
+                  (click)="openAddPolicyModal(contact)">
+            <i class="fas fa-shield-alt"></i>
+            Add Policy
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Loading State for Grid -->
-  <div class="loading-grid" *ngIf="loading && clients.length === 0">
+  <div class="loading-grid" *ngIf="loading && filteredContacts.length === 0">
     <div class="skeleton-card" *ngFor="let item of [1,2,3,4,5,6]">
       <div class="skeleton-header">
         <div class="skeleton-avatar"></div>
@@ -180,30 +296,35 @@
   </div>
 
   <!-- Empty State -->
-  <div class="empty-state" *ngIf="filteredClients.length === 0 && !loading">
+  <div class="empty-state" *ngIf="filteredContacts.length === 0 && !loading">
     <div class="empty-icon">
-      <i class="fas fa-users"></i>
+      <i class="fas" [ngClass]="{
+        'fa-users': activeTab === 'clients',
+        'fa-user-plus': activeTab === 'prospects',
+        'fa-shield-alt': activeTab === 'prospects_with_policies'
+      }"></i>
     </div>
-    <h3>No clients found</h3>
-    <p>{{ searchTerm ? 'Try adjusting your search criteria' : 'Start by adding your first client or prospect' }}</p>
+    <h3>No {{ activeTab === 'clients' ? 'clients' : activeTab === 'prospects' ? 'prospects' : 'prospects with policies' }} found</h3>
+    <p *ngIf="searchTerm">Try adjusting your search criteria</p>
+    <p *ngIf="!searchTerm">Start by adding your first {{ activeTab === 'clients' ? 'client' : 'prospect' }}</p>
     <button class="btn btn-primary" (click)="openAddModal()">
       <i class="fas fa-plus"></i>
-      Add First Client
+      Add First {{ activeTab === 'clients' ? 'Client' : 'Prospect' }}
     </button>
   </div>
 </div>
 
-<!-- Add/Edit Client Modal -->
+<!-- Add/Edit Contact Modal -->
 <div class="modal-overlay" *ngIf="showAddModal || showEditModal" (click)="showAddModal ? closeAddModal() : closeEditModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ showAddModal ? 'Add New Client' : 'Edit Client' }}</h2>
+      <h2>{{ showAddModal ? 'Add New' : 'Edit' }} {{ activeTab === 'clients' ? 'Client' : 'Prospect' }}</h2>
       <button class="btn-close" (click)="showAddModal ? closeAddModal() : closeEditModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     
-    <form [formGroup]="clientForm" (ngSubmit)="onSubmit()" class="client-form">
+    <form [formGroup]="contactForm" (ngSubmit)="onSubmit()" class="contact-form">
       <!-- Form Error Display -->
       <div class="form-error" *ngIf="error">
         <i class="fas fa-exclamation-circle"></i>
@@ -214,7 +335,7 @@
         <div class="form-group">
           <label for="firstName">First Name *</label>
           <input type="text" id="firstName" formControlName="firstName" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('firstName')?.invalid && clientForm.get('firstName')?.touched">
+          <div class="error-message" *ngIf="contactForm.get('firstName')?.invalid && contactForm.get('firstName')?.touched">
             First name is required
           </div>
         </div>
@@ -222,7 +343,7 @@
         <div class="form-group">
           <label for="surname">Surname *</label>
           <input type="text" id="surname" formControlName="surname" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('surname')?.invalid && clientForm.get('surname')?.touched">
+          <div class="error-message" *ngIf="contactForm.get('surname')?.invalid && contactForm.get('surname')?.touched">
             Surname is required
           </div>
         </div>
@@ -230,7 +351,7 @@
         <div class="form-group">
           <label for="lastName">Last Name *</label>
           <input type="text" id="lastName" formControlName="lastName" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('lastName')?.invalid && clientForm.get('lastName')?.touched">
+          <div class="error-message" *ngIf="contactForm.get('lastName')?.invalid && contactForm.get('lastName')?.touched">
             Last name is required
           </div>
         </div>
@@ -238,7 +359,7 @@
         <div class="form-group">
           <label for="phoneNumber">Phone Number *</label>
           <input type="tel" id="phoneNumber" formControlName="phoneNumber" class="form-control" placeholder="07xxxxxxxx" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('phoneNumber')?.invalid && clientForm.get('phoneNumber')?.touched">
+          <div class="error-message" *ngIf="contactForm.get('phoneNumber')?.invalid && contactForm.get('phoneNumber')?.touched">
             Valid phone number is required
           </div>
         </div>
@@ -246,53 +367,54 @@
         <div class="form-group">
           <label for="email">Email Address *</label>
           <input type="email" id="email" formControlName="email" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('email')?.invalid && clientForm.get('email')?.touched">
+          <div class="error-message" *ngIf="contactForm.get('email')?.invalid && contactForm.get('email')?.touched">
             Valid email address is required
           </div>
         </div>
-        
-        <div class="form-group">
-          <label for="nationalId">National ID *</label>
+
+        <!-- Client-specific fields -->
+        <div class="form-group" *ngIf="activeTab === 'clients' || contactForm.get('isClient')?.value">
+          <label for="nationalId">National ID {{ activeTab === 'clients' ? '*' : '' }}</label>
           <input type="text" id="nationalId" formControlName="nationalId" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('nationalId')?.invalid && clientForm.get('nationalId')?.touched">
-            National ID is required
+          <div class="error-message" *ngIf="contactForm.get('nationalId')?.invalid && contactForm.get('nationalId')?.touched">
+            National ID is required for clients
           </div>
         </div>
         
-        <div class="form-group">
-          <label for="dateOfBirth">Date of Birth *</label>
+        <div class="form-group" *ngIf="activeTab === 'clients' || contactForm.get('isClient')?.value">
+          <label for="dateOfBirth">Date of Birth {{ activeTab === 'clients' ? '*' : '' }}</label>
           <input type="date" id="dateOfBirth" formControlName="dateOfBirth" class="form-control" [disabled]="loading">
-          <div class="error-message" *ngIf="clientForm.get('dateOfBirth')?.invalid && clientForm.get('dateOfBirth')?.touched">
-            Date of birth is required
+          <div class="error-message" *ngIf="contactForm.get('dateOfBirth')?.invalid && contactForm.get('dateOfBirth')?.touched">
+            Date of birth is required for clients
           </div>
         </div>
         
-        <div class="form-group">
-          <label for="insuranceType">Insurance Type Most likely *</label>
+        <div class="form-group" *ngIf="activeTab === 'clients' || contactForm.get('isClient')?.value">
+          <label for="insuranceType">Insurance Type {{ activeTab === 'clients' ? '*' : '' }}</label>
           <select id="insuranceType" formControlName="insuranceType" class="form-control" [disabled]="loading">
             <option value="">Select Insurance Type</option>
             <option *ngFor="let type of insuranceTypes" [value]="type">{{ type }}</option>
           </select>
-          <div class="error-message" *ngIf="clientForm.get('insuranceType')?.invalid && clientForm.get('insuranceType')?.touched">
-            Please select an insurance type
+          <div class="error-message" *ngIf="contactForm.get('insuranceType')?.invalid && contactForm.get('insuranceType')?.touched">
+            Please select an insurance type for clients
           </div>
         </div>
       </div>
       
-      <div class="form-group full-width">
-        <label for="address">Address *</label>
+      <div class="form-group full-width" *ngIf="activeTab === 'clients' || contactForm.get('isClient')?.value">
+        <label for="address">Address {{ activeTab === 'clients' ? '*' : '' }}</label>
         <textarea id="address" formControlName="address" class="form-control" rows="2" [disabled]="loading"></textarea>
-        <div class="error-message" *ngIf="clientForm.get('address')?.invalid && clientForm.get('address')?.touched">
-          Address is required
+        <div class="error-message" *ngIf="contactForm.get('address')?.invalid && contactForm.get('address')?.touched">
+          Address is required for clients
         </div>
       </div>
       
       <div class="form-group full-width">
         <label for="notes">Notes</label>
-        <textarea id="notes" formControlName="notes" class="form-control" rows="3" placeholder="Additional notes about the client..." [disabled]="loading"></textarea>
+        <textarea id="notes" formControlName="notes" class="form-control" rows="3" placeholder="Additional notes..." [disabled]="loading"></textarea>
       </div>
       
-      <div class="form-group checkbox-group">
+      <div class="form-group checkbox-group" *ngIf="activeTab !== 'clients'">
         <label class="checkbox-label">
           <input type="checkbox" formControlName="isClient" [disabled]="loading">
           <span class="checkmark"></span>
@@ -304,35 +426,99 @@
         <button type="button" class="btn btn-secondary" (click)="showAddModal ? closeAddModal() : closeEditModal()" [disabled]="loading">
           Cancel
         </button>
-        <button type="submit" class="btn btn-primary" [disabled]="clientForm.invalid || loading">
+        <button type="submit" class="btn btn-primary" [disabled]="contactForm.invalid || loading">
           <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
           <i class="fas fa-check" *ngIf="!loading"></i>
-          {{ showAddModal ? 'Add Client' : 'Update Client' }}
+          {{ showAddModal ? 'Add' : 'Update' }} {{ activeTab === 'clients' ? 'Client' : 'Contact' }}
         </button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- View Client Modal -->
+<!-- Add Policy Modal -->
+<div class="modal-overlay" *ngIf="showAddPolicyModal" (click)="closeAddPolicyModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Add External Policy</h2>
+      <button class="btn-close" (click)="closeAddPolicyModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="policyForm" (ngSubmit)="onAddPolicy()" class="policy-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="companyName">Insurance Company *</label>
+          <input type="text" id="companyName" formControlName="companyName" class="form-control" [disabled]="loading">
+          <div class="error-message" *ngIf="policyForm.get('companyName')?.invalid && policyForm.get('companyName')?.touched">
+            Company name is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="policyType">Policy Type *</label>
+          <select id="policyType" formControlName="policyType" class="form-control" [disabled]="loading">
+            <option value="">Select Policy Type</option>
+            <option *ngFor="let type of insuranceTypes" [value]="type">{{ type }}</option>
+          </select>
+          <div class="error-message" *ngIf="policyForm.get('policyType')?.invalid && policyForm.get('policyType')?.touched">
+            Policy type is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="policyNumber">Policy Number</label>
+          <input type="text" id="policyNumber" formControlName="policyNumber" class="form-control" [disabled]="loading">
+        </div>
+        
+        <div class="form-group">
+          <label for="expiryDate">Expiry Date</label>
+          <input type="date" id="expiryDate" formControlName="expiryDate" class="form-control" [disabled]="loading">
+        </div>
+      </div>
+      
+      <div class="form-group full-width">
+        <label for="policyNotes">Notes</label>
+        <textarea id="policyNotes" formControlName="notes" class="form-control" rows="3" placeholder="Additional policy notes..." [disabled]="loading"></textarea>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeAddPolicyModal()" [disabled]="loading">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="policyForm.invalid || loading">
+          <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+          <i class="fas fa-shield-alt" *ngIf="!loading"></i>
+          Add Policy
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- View Contact Modal -->
 <div class="modal-overlay" *ngIf="showViewModal" (click)="closeViewModal()">
   <div class="modal-content view-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Client Details</h2>
+      <h2>{{ selectedContact?.type === 'client' ? 'Client' : 'Prospect' }} Details</h2>
       <button class="btn-close" (click)="closeViewModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     
-    <div class="client-profile" *ngIf="selectedClient">
+    <div class="contact-profile" *ngIf="selectedContact">
       <div class="profile-header">
         <div class="profile-avatar">
-          <span>{{ selectedClient.firstName[0] }}{{ selectedClient.surname[0] }}</span>
+          <span>{{ selectedContact.firstName[0] }}{{ selectedContact.surname[0] || selectedContact.lastName[0] }}</span>
         </div>
         <div class="profile-info">
-          <h3>{{ selectedClient.firstName }} {{ selectedClient.surname }} {{ selectedClient.lastName }}</h3>
-          <span class="status-badge large" [ngClass]="{'client': selectedClient.isClient, 'prospect': !selectedClient.isClient}">
-            {{ selectedClient.isClient ? 'Client' : 'Prospect' }}
+          <h3>{{ getDisplayName(selectedContact) }}</h3>
+          <span class="status-badge large" [ngClass]="selectedContact.type">
+            {{ selectedContact.type === 'client' ? 'Client' : 'Prospect' }}
+          </span>
+          <span class="has-policies-badge" *ngIf="selectedContact.hasExternalPolicies">
+            <i class="fas fa-shield-alt"></i> Has External Policies
           </span>
         </div>
       </div>
@@ -341,93 +527,98 @@
         <div class="detail-section">
           <h4>Contact Information</h4>
           <div class="detail-grid">
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.phoneNumber">
               <label>Phone:</label>
-              <span>{{ selectedClient.phoneNumber }}</span>
+              <span>{{ selectedContact.phoneNumber }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.email">
               <label>Email:</label>
-              <span>{{ selectedClient.email }}</span>
+              <span>{{ selectedContact.email }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.address">
               <label>Address:</label>
-              <span>{{ selectedClient.address }}</span>
+              <span>{{ selectedContact.address }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.nationalId">
               <label>National ID:</label>
-              <span>{{ selectedClient.nationalId }}</span>
+              <span>{{ selectedContact.nationalId }}</span>
             </div>
           </div>
         </div>
         
-        <div class="detail-section">
+        <div class="detail-section" *ngIf="selectedContact.type === 'client'">
           <h4>Personal Information</h4>
           <div class="detail-grid">
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.dateOfBirth">
               <label>Date of Birth:</label>
-              <span>{{ formatDate(selectedClient.dateOfBirth) }}</span>
+              <span>{{ formatDate(selectedContact.dateOfBirth) }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item" *ngIf="selectedContact.dateOfBirth">
               <label>Age:</label>
-              <span>{{ calculateAge(selectedClient.dateOfBirth) }} years</span>
+              <span>{{ calculateAge(selectedContact.dateOfBirth) }} years</span>
             </div>
-            <div class="detail-item">
-              <label>Insurance Type Most Likely:</label>
-              <span>{{ selectedClient.insuranceType }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="detail-section" *ngIf="selectedClient.policy">
-          <h4>Policy Information</h4>
-          <div class="policy-card">
-            <div class="policy-header">
-              <h5>{{ selectedClient.policy.name }}</h5>
-              <span class="policy-status" [ngClass]="selectedClient.policy.status.toLowerCase()">
-                {{ selectedClient.policy.status }}
-              </span>
-            </div>
-            <div class="policy-details">
-              <div class="policy-item">
-                <label>Company:</label>
-                <span>{{ selectedClient.policy.companyName }}</span>
-              </div>
-              <div class="policy-item">
-                <label>Type:</label>
-                <span>{{ selectedClient.policy.type }}</span>
-              </div>
-              <div class="policy-item">
-                <label>Start Date:</label>
-                <span>{{ formatDate(selectedClient.policy.startDate) }}</span>
-              </div>
-              <div class="policy-item">
-                <label>End Date:</label>
-                <span>{{ formatDate(selectedClient.policy.endDate) }}</span>
-              </div>
-              <div class="policy-item" *ngIf="selectedClient.policy.notes">
-                <label>Notes:</label>
-                <span>{{ selectedClient.policy.notes }}</span>
-              </div>
+            <div class="detail-item" *ngIf="selectedContact.insuranceType">
+              <label>Insurance Type:</label>
+              <span>{{ selectedContact.insuranceType }}</span>
             </div>
           </div>
         </div>
         
-        <div class="detail-section" *ngIf="selectedClient.notes">
+        <div class="detail-section" *ngIf="selectedContact.policies && selectedContact.policies.length > 0">
+          <h4>External Policies</h4>
+          <div class="policies-list">
+            <div class="policy-card" *ngFor="let policy of selectedContact.policies">
+              <div class="policy-header">
+                <h5>{{ policy.companyName }}</h5>
+                <span class="policy-status" [ngClass]="policy.status.toLowerCase()">
+                  {{ policy.status }}
+                </span>
+              </div>
+              <div class="policy-details">
+                <div class="policy-item" *ngIf="policy.type">
+                  <label>Type:</label>
+                  <span>{{ policy.type }}</span>
+                </div>
+                <div class="policy-item" *ngIf="policy.name">
+                  <label>Policy Number:</label>
+                  <span>{{ policy.name }}</span>
+                </div>
+                <div class="policy-item" *ngIf="policy.expiryDate">
+                  <label>Expiry Date:</label>
+                  <span>{{ formatDate(policy.expiryDate) }}</span>
+                </div>
+                <div class="policy-item" *ngIf="policy.notes">
+                  <label>Notes:</label>
+                  <span>{{ policy.notes }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="detail-section" *ngIf="selectedContact.notes">
           <h4>Notes</h4>
-          <p class="notes-content">{{ selectedClient.notes }}</p>
+          <p class="notes-content">{{ selectedContact.notes }}</p>
         </div>
       </div>
       
       <div class="profile-actions">
-        <button class="btn btn-secondary" (click)="openEditModal(selectedClient!)">
+        <button class="btn btn-secondary" (click)="openEditModal(selectedContact!)">
           <i class="fas fa-edit"></i>
-          Edit Client
+          Edit {{ selectedContact?.type === 'client' ? 'Client' : 'Prospect' }}
         </button>
-<div *ngFor="let client of clients">
- 
-</div>
-
-
+        <button class="btn btn-outline" 
+                *ngIf="selectedContact?.type === 'prospect'" 
+                (click)="convertProspectToClient(selectedContact!)">
+          <i class="fas fa-user-check"></i>
+          Convert to Client
+        </button>
+        <button class="btn btn-outline" 
+                *ngIf="selectedContact?.type === 'prospect'" 
+                (click)="openAddPolicyModal(selectedContact!)">
+          <i class="fas fa-shield-alt"></i>
+          Add Policy
+        </button>
       </div>
     </div>
   </div>
