@@ -605,7 +605,7 @@
       <div class="profile-actions">
         <button class="btn btn-secondary" (click)="openEditModal(selectedContact!)">
           <i class="fas fa-edit"></i>
-          Edit {{ selectedContact?.type === 'client' ? 'Client' : 'Prospect' }}
+          Edit {{ selectedContact!.type === 'client' ? 'Client' : 'Prospect' }}
         </button>
         <button class="btn btn-outline" 
                 *ngIf="selectedContact?.type === 'prospect'" 
